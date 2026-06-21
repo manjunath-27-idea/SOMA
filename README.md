@@ -1,16 +1,52 @@
-# React + Vite
+# SOMA - Interactive 3D Human Anatomy Tutor
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SOMA is a modern, responsive 3D web application designed for learning human anatomy interactively. Built with **React**, **Three.js (React Three Fiber)**, and powered by the **Google Gemini API** (with local offline fallback), SOMA offers a premium learning experience.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Key Features
 
-## React Compiler
+* **Interactive 3D Human Mesh:** Select regions directly on the 3D model. Hovering highlights regions in soft grey-blue, and clicking focuses them in corporate blue.
+* **Dual Modes (Online & Offline):**
+  * **Online (Gemini API):** Set your Gemini API key in the SOMA Explorer settings to enable general biological reasoning, detailed explanations, and contextual anatomical conversation.
+  * **Offline (Local Dictionary):** Search a local database of 256 anatomical regions with descriptions, functions, and clinical significance when no API key is set.
+* **Slash Commands (`/`):** Directly query systems or groups of regions from the chat box (e.g. `/head`, `/abdomen`, or `/Epigastric Region`).
+* **Multi-Organ Highlighting:** Highlight multiple organs at the same time.
+* **Stable Turntable Auto-Rotation:** When systems or groups are selected, the camera frames them cleanly while keeping the model smoothly rotating so you can inspect them from the front, side, and back.
+* **Layout Isolation:** Panels are locked to avoid layout shifting or panel squishing during sidebar toggle transitions.
+* **Selection-to-Input Sync:** Clicking any organ or system tab automatically populates the chat box with its corresponding slash command format.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🛠️ Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+* **Frontend:** React (Vite)
+* **3D Graphics:** Three.js, React Three Fiber (R3F), `@react-three/drei`
+* **Icons:** Lucide React
+* **Styling:** CSS (Flexbox grid, responsive layouts)
+
+---
+
+## 📦 Installation & Setup
+
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Run in Development Mode:**
+   ```bash
+   npm run dev
+   ```
+3. **Build for Production:**
+   ```bash
+   npm run build
+   ```
+
+---
+
+## 🔍 Slash Command Examples
+
+* `/Head` — Highlights all head organs and zooms to the head.
+* `/Neck` — Highlights all neck organs and zooms to the neck.
+* `/Epigastric Region` — Highlights both the Left and Right Epigastric regions simultaneously (automatic side matching).
+* `/Left Epigastric Region, Left Umbilical Region` — Highlights multiple specific regions.
