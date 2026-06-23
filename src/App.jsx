@@ -633,8 +633,10 @@ ${data.clinical}
         left: '16px',
         right: '16px',
         zIndex: 100,
-        background: 'rgba(255, 255, 255, 0.96)',
-        border: '1px solid #e2e8f0',
+        background: 'rgba(255, 255, 255, 0.5)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
         borderRadius: '12px',
         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         display: 'flex',
@@ -655,18 +657,18 @@ ${data.clinical}
         background: '#ffffff' 
       }}>
         
-        {/* Chat Panel Header (shows expand button if sidebar is closed) */}
         <div 
           onClick={() => isMobile && setChatExpanded(!chatExpanded)}
           style={{ 
             padding: '16px 20px', 
-            borderBottom: '1px solid #e2e8f0', 
+            borderBottom: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between', 
-            background: '#ffffff', 
+            background: isMobile ? 'transparent' : '#ffffff', 
             height: '57px', 
             minHeight: '57px', 
+            flexShrink: 0,
             boxSizing: 'border-box',
             cursor: isMobile ? 'pointer' : 'default',
             userSelect: 'none'
@@ -701,7 +703,14 @@ ${data.clinical}
 
 
         {/* Chat History Panel */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ 
+          display: (isMobile && !chatExpanded) ? 'none' : 'flex',
+          flex: 1, 
+          overflowY: 'auto', 
+          padding: '20px', 
+          flexDirection: 'column', 
+          gap: '16px' 
+        }}>
           {messages.map((m, i) => {
             if (m.role === 'command_result') {
               return (
@@ -837,7 +846,17 @@ ${data.clinical}
         </div>
 
         {/* Input box */}
-        <form onSubmit={handleSendQuery} style={{ padding: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px', background: '#ffffff' }}>
+        <form 
+          onSubmit={handleSendQuery} 
+          style={{ 
+            display: (isMobile && !chatExpanded) ? 'none' : 'flex',
+            padding: '16px', 
+            borderTop: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', 
+            gap: '8px', 
+            background: isMobile ? 'transparent' : '#ffffff',
+            flexShrink: 0
+          }}
+        >
           <input 
             value={input} 
             onChange={(e) => setInput(e.target.value)}
@@ -890,22 +909,25 @@ ${data.clinical}
         flexDirection: 'column'
       } : { 
         flex: 1, 
+        minWidth: '0px', 
         position: 'relative', 
         display: 'flex', 
         flexDirection: 'column', 
-        background: '#ffffff',
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+        background: '#ffffff'
       }}>
         
         {/* Floating Tooltip/Hover Banner - Static position relative to left edge */}
         <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 10, background: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column', gap: '2px', pointerEvents: 'none' }}>
-          <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8' }}>Hovered Region</span>
+          <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8' }}>
+            {hoveredOrgan ? 'Hovered Region' : (activeOrgan ? 'Selected Region' : 'Region Info')}
+          </span>
           <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
-            {hoveredOrgan ? (anatomyData[hoveredOrgan]?.name || skeletonAnatomyData[hoveredOrgan]?.name || cleanDisplayName(hoveredOrgan)) : 'None'}
+            {hoveredOrgan ? 
+              (anatomyData[hoveredOrgan]?.name || skeletonAnatomyData[hoveredOrgan]?.name || cleanDisplayName(hoveredOrgan)) : 
+              (activeOrgan ? (anatomyData[activeOrgan]?.name || skeletonAnatomyData[activeOrgan]?.name || cleanDisplayName(activeOrgan)) : 'None')}
           </span>
         </div>
 
-        {/* Legend Panel & Reset view - Static position aligned to the right side of the canvas */}
         <div style={{ 
           position: 'absolute', 
           top: '16px', 
@@ -933,18 +955,13 @@ ${data.clinical}
           >
             Reset View
           </button>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f1f5f9', padding: '6px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '11px', fontWeight: '600', color: '#475569', whiteSpace: 'nowrap' }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: apiKey ? '#22c55e' : '#f59e0b' }}></span>
-            <span>{apiKey ? 'Online (Gemini)' : 'Offline (Local Dict)'}</span>
-          </div>
         </div>
 
         {/* 3D Canvas */}
         <div style={{ flex: 1, width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
           <Canvas 
             shadows
-            camera={{ position: [0, 0, 4.5], fov: 45 }}
+            camera={{ position: [0, 0, isMobile ? 5.5 : 4.5], fov: 45 }}
             style={{ background: '#ffffff' }}
           >
             <color attach="background" args={['#ffffff']} />
@@ -992,40 +1009,37 @@ ${data.clinical}
           {tourActive && tourRegions.length > 0 && tourRegions[tourIndex] && (
             <div style={{
               position: 'absolute',
-              bottom: '24px',
-              left: '50%',
-              transform: 'translateX(-50%)',
+              bottom: isMobile ? 'auto' : '24px',
+              top: isMobile ? '80px' : 'auto',
+              left: isMobile ? '16px' : '50%',
+              transform: isMobile ? 'none' : 'translateX(-50%)',
               zIndex: 50,
+              transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               background: 'rgba(255, 255, 255, 0.85)',
               backdropFilter: 'blur(8px)',
               WebkitBackdropFilter: 'blur(8px)',
               border: '1px solid rgba(255, 255, 255, 0.4)',
               boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
               borderRadius: '12px',
-              padding: '16px 20px',
+              padding: isMobile ? '8px 10px' : '16px 20px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              gap: '12px',
-              minWidth: '300px',
+              gap: isMobile ? '6px' : '12px',
+              width: isMobile ? '110px' : 'auto',
+              minWidth: isMobile ? '110px' : '300px',
               maxWidth: '90%',
               boxSizing: 'border-box'
             }}>
               {/* Tour Progress Info */}
               <div style={{ textAlign: 'center', width: '100%' }}>
-                <div style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', color: '#3b82f6', letterSpacing: '0.05em', marginBottom: '2px' }}>
-                  Anatomy Tour ({tourRegions[tourIndex].system} System)
-                </div>
-                <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
-                  {tourRegions[tourIndex].name}
-                </h4>
-                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
-                  Step {tourIndex + 1} of {tourRegions.length}
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  {isMobile ? `${tourIndex + 1}/${tourRegions.length}` : `Step {tourIndex + 1} of {tourRegions.length}`}
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '14px' }}>
                 {/* Prev Button */}
                 <button
                   onClick={() => {
@@ -1038,7 +1052,7 @@ ${data.clinical}
                     border: '1px solid #cbd5e1',
                     background: '#ffffff',
                     cursor: 'pointer',
-                    padding: '8px',
+                    padding: isMobile ? '4px' : '8px',
                     borderRadius: '50%',
                     color: '#475569',
                     display: 'flex',
@@ -1050,7 +1064,7 @@ ${data.clinical}
                   onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
                   onMouseOut={(e) => e.currentTarget.style.background = '#ffffff'}
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={isMobile ? 12 : 16} />
                 </button>
 
                 {/* Play/Pause Button */}
@@ -1064,7 +1078,7 @@ ${data.clinical}
                     border: 'none',
                     background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
                     cursor: 'pointer',
-                    padding: '12px',
+                    padding: isMobile ? '6px' : '12px',
                     borderRadius: '50%',
                     color: '#ffffff',
                     display: 'flex',
@@ -1076,7 +1090,7 @@ ${data.clinical}
                   onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  {tourPlaying ? <Pause size={18} fill="#ffffff" /> : <Play size={18} fill="#ffffff" />}
+                  {tourPlaying ? <Pause size={isMobile ? 12 : 18} fill="#ffffff" /> : <Play size={isMobile ? 12 : 18} fill="#ffffff" />}
                 </button>
 
                 {/* Next Button */}
@@ -1091,7 +1105,7 @@ ${data.clinical}
                     border: '1px solid #cbd5e1',
                     background: '#ffffff',
                     cursor: 'pointer',
-                    padding: '8px',
+                    padding: isMobile ? '4px' : '8px',
                     borderRadius: '50%',
                     color: '#475569',
                     display: 'flex',
@@ -1103,7 +1117,7 @@ ${data.clinical}
                   onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
                   onMouseOut={(e) => e.currentTarget.style.background = '#ffffff'}
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={isMobile ? 12 : 16} />
                 </button>
               </div>
 
@@ -1119,7 +1133,7 @@ ${data.clinical}
                   border: 'none',
                   background: 'transparent',
                   color: '#ef4444',
-                  fontSize: '11px',
+                  fontSize: isMobile ? '10px' : '11px',
                   fontWeight: '700',
                   cursor: 'pointer',
                   padding: '4px 8px',
@@ -1129,7 +1143,7 @@ ${data.clinical}
                 onMouseOver={(e) => e.currentTarget.style.background = '#fee2e2'}
                 onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                Exit Tour
+                {isMobile ? 'Exit' : 'Exit Tour'}
               </button>
             </div>
           )}
@@ -1144,8 +1158,10 @@ ${data.clinical}
         height: '100%',
         width: '280px',
         zIndex: 150,
-        background: '#f8fafc',
-        borderLeft: '1px solid #e2e8f0',
+        background: 'rgba(248, 250, 252, 0.5)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderLeft: '1px solid rgba(226, 232, 240, 0.3)',
         transform: sidebarOpen ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         display: 'flex',
@@ -1153,7 +1169,7 @@ ${data.clinical}
         pointerEvents: sidebarOpen ? 'auto' : 'none'
       } : { 
         width: sidebarOpen ? '280px' : '0px', 
-        minWidth: sidebarOpen ? '280px' : '0px', 
+        minWidth: '0px', 
         flexShrink: 0,
         flexGrow: 0,
         pointerEvents: sidebarOpen ? 'auto' : 'none',
@@ -1161,7 +1177,7 @@ ${data.clinical}
         display: 'flex', 
         flexDirection: 'column', 
         background: '#f8fafc',
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
         position: 'relative'
       }}>
@@ -1204,7 +1220,7 @@ ${data.clinical}
         </div>
 
         {/* Layer Visibility Controls */}
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ padding: '12px 20px', borderBottom: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', background: isMobile ? 'transparent' : '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>
             Model Layers
           </div>
@@ -1240,7 +1256,7 @@ ${data.clinical}
         </div>
 
         {/* System Category Tabs */}
-        <div style={{ padding: '10px 14px', borderBottom: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        <div style={{ padding: '10px 14px', borderBottom: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {systems.map((sys) => (
             <button
               key={sys}

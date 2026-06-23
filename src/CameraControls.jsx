@@ -58,7 +58,9 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWhol
 
     if (!activeOrgan && (!highlightedOrgans || highlightedOrgans.length === 0)) {
       // Default camera state: Reset back to viewing the entire body
-      targetPos.current.set(0, 0, 4.5);
+      // On mobile, zoom out slightly (z = 5.5) to prevent vertical clipping on narrow screens
+      const defaultZ = (typeof window !== 'undefined' && window.innerWidth < 768) ? 5.5 : 4.5;
+      targetPos.current.set(0, 0, defaultZ);
       targetLookAt.current.set(0, -0.2, 0);
       return;
     }

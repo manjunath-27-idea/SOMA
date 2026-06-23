@@ -89,13 +89,22 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
 
     // 1. Update Body scene materials
     scene.traverse((child) => {
-      if (child.isMesh) {
-        // Toggle visibility of hair meshes based on showHair state
-        const isHair = child.name.startsWith('Hair.');
-        if (isHair) {
-          child.visible = showHair;
+      // Toggle visibility of hair meshes/groups based on showHair state
+      // We check if the node itself or any of its parents is head hair or pubic hair
+      let isToggledHair = false;
+      let temp = child;
+      while (temp) {
+        if (temp.name && (temp.name.startsWith('Hair.Hairs of head') || temp.name.startsWith('Hair.Pubic hairs'))) {
+          isToggledHair = true;
+          break;
         }
+        temp = temp.parent;
+      }
+      if (isToggledHair) {
+        child.visible = showHair;
+      }
 
+      if (child.isMesh) {
         const isSelected = child.name === activeOrgan || highlightedOrgans.includes(child.name) || shareParentRegion(child.name, activeOrgan);
         const isHovered = child.name === hoveredOrgan || child.name === hoveredMeshName || shareParentRegion(child.name, hoveredOrgan) || shareParentRegion(child.name, hoveredMeshName);
         const orig = originalMaterialsRef.current.get(child.name);
