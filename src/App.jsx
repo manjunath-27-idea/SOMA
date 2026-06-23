@@ -638,7 +638,7 @@ ${data.clinical}
         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
         display: 'flex',
         flexDirection: 'column',
-        height: chatExpanded ? '400px' : '57px',
+        height: chatExpanded ? '330px' : '57px',
         maxHeight: '65vh',
         transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden'
