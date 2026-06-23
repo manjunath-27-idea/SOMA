@@ -5,8 +5,8 @@ import * as THREE from 'three';
 
 export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, highlightedOrgans = [], showBody = true, showSkeleton = false, showHair = true }) {
   // Load the glTF models from the public directory
-  const { scene } = useGLTF('/human_model.glb');
-  const skeleton = useGLTF('/SkeletonJoints.glb');
+  const { scene } = useGLTF('./human_model.glb');
+  const skeleton = useGLTF('./SkeletonJoints.glb');
   const [hoveredMeshName, setHoveredMeshName] = useState(null);
   const modelRef = useRef();
 
@@ -240,5 +240,5 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
 }
 
 // Pre-load the glTF files for better responsiveness
-useGLTF.preload('/human_model.glb');
-useGLTF.preload('/SkeletonJoints.glb');
+useGLTF.preload('./human_model.glb');
+useGLTF.preload('./SkeletonJoints.glb');

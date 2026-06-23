@@ -26,7 +26,7 @@ function App() {
   const [blenderTexts, setBlenderTexts] = useState(null);
 
   useEffect(() => {
-    fetch('/blender_texts.json')
+    fetch('./blender_texts.json')
       .then(res => res.json())
       .then(data => setBlenderTexts(data))
       .catch(err => console.error('Failed to load Blender texts:', err));
