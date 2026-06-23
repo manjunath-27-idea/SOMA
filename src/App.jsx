@@ -142,9 +142,6 @@ function App() {
   const handleSelectOrgan = (organId) => {
     setActiveOrgan(organId);
     setHighlightedOrgans([]); // Clear any bulk highlights when focusing a single organ
-    if (isMobile) {
-      setChatExpanded(true);
-    }
     if (tourActive) {
       setTourPlaying(false);
       setManualFocus(true);
