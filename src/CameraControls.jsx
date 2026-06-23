@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-export function CameraControls({ activeOrgan, highlightedOrgans = [] }) {
+export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWholeTour = false, tourRegions = [] }) {
   const { camera, scene, controls } = useThree();
   
   // Track target positions for interpolation
@@ -16,6 +16,46 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [] }) {
     // Start/restart the transition animation (60 frames, approx. 1 second at 60fps)
     framesRemaining.current = 60;
 
+    if (zoomToWholeTour && tourRegions.length > 0) {
+      // Zoom out to show all regions in the tour combined (e.g. the entire arm/head system)
+      let targetMeshes = [];
+      const allKeys = tourRegions.flatMap(r => r.keys);
+      scene.traverse((child) => {
+        if (child.isMesh && allKeys.includes(child.name)) {
+          targetMeshes.push(child);
+        }
+      });
+
+      if (targetMeshes.length > 0) {
+        const combinedBox = new THREE.Box3();
+        targetMeshes.forEach((mesh, index) => {
+          const box = new THREE.Box3().setFromObject(mesh);
+          if (index === 0) {
+            combinedBox.copy(box);
+          } else {
+            combinedBox.union(box);
+          }
+        });
+
+        const center = new THREE.Vector3();
+        combinedBox.getCenter(center);
+        
+        const size = new THREE.Vector3();
+        combinedBox.getSize(size);
+        
+        // Determine camera distance based on box size
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fovRad = camera.fov * (Math.PI / 180);
+        let distance = Math.abs(maxDim / Math.sin(fovRad / 2));
+
+        // Center on vertical axis
+        targetLookAt.current.set(0, center.y, 0);
+        distance = Math.max(distance * 1.2, 1.2);
+        targetPos.current.set(0, center.y + 0.1, distance);
+      }
+      return;
+    }
+
     if (!activeOrgan && (!highlightedOrgans || highlightedOrgans.length === 0)) {
       // Default camera state: Reset back to viewing the entire body
       targetPos.current.set(0, 0, 4.5);
@@ -25,9 +65,15 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [] }) {
 
     // Traverse the scene to locate the target meshes
     let targetMeshes = [];
+    const shareParent = (name1, name2) => {
+      if (!name1 || !name2) return false;
+      const base1 = name1.split('.').slice(0, 2).join('.').toLowerCase();
+      const base2 = name2.split('.').slice(0, 2).join('.').toLowerCase();
+      return base1 === base2;
+    };
     scene.traverse((child) => {
       if (child.isMesh) {
-        if (activeOrgan && child.name === activeOrgan) {
+        if (activeOrgan && (child.name === activeOrgan || shareParent(child.name, activeOrgan))) {
           targetMeshes.push(child);
         } else if (!activeOrgan && highlightedOrgans && highlightedOrgans.includes(child.name)) {
           targetMeshes.push(child);
@@ -59,7 +105,7 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [] }) {
       let distance = Math.abs(maxDim / Math.sin(fovRad / 2));
 
       if (activeOrgan) {
-        // Single organ zoom
+        // Single organ zoom (Restore the original single organ zoom logic)
         targetLookAt.current.copy(center);
         distance = Math.max(distance * 1.5, 0.6);
         
@@ -85,7 +131,7 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [] }) {
         targetPos.current.set(0, center.y + 0.1, distance);
       }
     }
-  }, [activeOrgan, highlightedOrgans, scene, camera]);
+  }, [activeOrgan, highlightedOrgans, zoomToWholeTour, tourRegions, scene, camera]);
 
   useFrame(() => {
     // Only lerp the camera position and target during the transition window

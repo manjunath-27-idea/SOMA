@@ -4,8 +4,9 @@ import { OrbitControls } from '@react-three/drei';
 import { Model } from './Model';
 import { CameraControls } from './CameraControls';
 import { anatomyData, systems } from './AnatomyData';
+import { skeletonAnatomyData } from './SkeletonAnatomyData';
 import { askGeminiTutor } from './GeminiService';
-import { Send, Settings, RefreshCw, Layers, MessageSquare, Info, AlertCircle, HelpCircle, PanelRight, PanelRightClose, PanelRightOpen, X } from 'lucide-react';
+import { Send, Settings, RefreshCw, Layers, MessageSquare, Info, AlertCircle, HelpCircle, PanelRight, PanelRightClose, PanelRightOpen, X, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function App() {
   const [input, setInput] = useState('');
@@ -20,6 +21,51 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [chatExpanded, setChatExpanded] = useState(false);
+  const [showBody, setShowBody] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
+  const [blenderTexts, setBlenderTexts] = useState(null);
+
+  useEffect(() => {
+    fetch('/blender_texts.json')
+      .then(res => res.json())
+      .then(data => setBlenderTexts(data))
+      .catch(err => console.error('Failed to load Blender texts:', err));
+  }, []);
+
+  const [tourActive, setTourActive] = useState(false);
+  const [tourRegions, setTourRegions] = useState([]);
+  const [tourIndex, setTourIndex] = useState(0);
+  const [tourPlaying, setTourPlaying] = useState(false);
+  const [manualFocus, setManualFocus] = useState(false);
+  const [showHair, setShowHair] = useState(true);
+
+  // Auto-play timer for the tour
+  useEffect(() => {
+    let timer;
+    if (tourActive && tourPlaying) {
+      timer = setInterval(() => {
+        setTourIndex((prev) => {
+          if (prev >= tourRegions.length - 1) {
+            setTourPlaying(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 4000); // 4 seconds per step
+    }
+    return () => clearInterval(timer);
+  }, [tourActive, tourPlaying, tourRegions.length]);
+
+  // Handle camera & selection updates when step index changes
+  useEffect(() => {
+    if (tourActive && tourRegions.length > 0 && tourRegions[tourIndex]) {
+      const currentStep = tourRegions[tourIndex];
+      // Select the first mesh in this step to load descriptions/metadata
+      setActiveOrgan(currentStep.keys[0]);
+      // Highlight all matching keys in this step (e.g. left and right sides)
+      setHighlightedOrgans(currentStep.keys);
+    }
+  }, [tourIndex, tourActive, tourRegions]);
 
   const handleTriggerHighlight = (organIds, label) => {
     setActiveOrgan(null);
@@ -30,10 +76,15 @@ function App() {
   const handleSelectSystem = (sys) => {
     setSelectedSystem(sys);
     
-    // Highlight all organs in this system
-    const organIds = Object.keys(anatomyData).filter(
+    // Highlight all organs in this system (both body and skeleton)
+    const bodyOrganIds = Object.keys(anatomyData).filter(
       key => anatomyData[key].system.toLowerCase() === sys.toLowerCase()
     );
+    const skeletonOrganIds = Object.keys(skeletonAnatomyData).filter(
+      key => skeletonAnatomyData[key].system.toLowerCase() === sys.toLowerCase()
+    );
+    const organIds = [...bodyOrganIds, ...skeletonOrganIds];
+    
     setActiveOrgan(null);
     setHighlightedOrgans(organIds);
     setInput(`/${sys}`);
@@ -94,9 +145,13 @@ function App() {
     if (isMobile) {
       setChatExpanded(true);
     }
+    if (tourActive) {
+      setTourPlaying(false);
+      setManualFocus(true);
+    }
     
     // If the organ exists in our database, add a clean informational note in the chat
-    const data = anatomyData[organId];
+    const data = anatomyData[organId] || skeletonAnatomyData[organId];
     if (data) {
       setInput(`/${data.name}`);
       setMessages((prev) => [
@@ -110,95 +165,106 @@ function App() {
   };
 
   // Perform search / AI query
-  const handleSendQuery = async (e) => {
-    e?.preventDefault();
-    if (!input.trim() || isPending) return;
+  const findMatchingRegions = (queryText) => {
+    const cleanQuery = queryText.startsWith('/') ? queryText.substring(1).trim().toLowerCase() : queryText.trim().toLowerCase();
+    if (!cleanQuery) return [];
 
-    const userText = input.trim();
-    setInput('');
+    const matchedKeys = new Set();
 
-    // Append user message
-    const newMessages = [...messages, { role: 'user', text: userText }];
-    setMessages(newMessages);
+    const checkMatch = (key, data) => {
+      const systemName = data.system.toLowerCase();
+      const regionName = data.name.toLowerCase();
+      const cleanRegion = data.name.replace(/(Left|Right|Central)\s*/i, '').trim().toLowerCase();
+      const idLower = key.toLowerCase();
+      const idParts = key.split('.');
+      const baseId = idParts.slice(0, 2).join('.').toLowerCase(); // ignore side and index
 
-    // Check if input is a slash command
-    if (userText.startsWith('/')) {
-      const commandBody = userText.substring(1).trim();
+      // Check system name match, region name match, clean region name match, ID match, base ID match
+      if (systemName === cleanQuery || 
+          regionName === cleanQuery || 
+          cleanRegion === cleanQuery || 
+          idLower === cleanQuery ||
+          baseId === cleanQuery ||
+          systemName.includes(cleanQuery) || 
+          regionName.includes(cleanQuery) || 
+          cleanRegion.includes(cleanQuery) || 
+          idLower.includes(cleanQuery) ||
+          baseId.includes(cleanQuery)) {
+        matchedKeys.add(key);
+      }
+    };
+
+    Object.keys(anatomyData).forEach(key => checkMatch(key, anatomyData[key]));
+    Object.keys(skeletonAnatomyData).forEach(key => checkMatch(key, skeletonAnatomyData[key]));
+
+    // Group the keys by their base region (System.RegionName)
+    // e.g. group "Head.Frontal region.l.001" and "Head.Frontal region.r.001" together
+    const grouped = {};
+    matchedKeys.forEach(key => {
+      const parts = key.split('.');
+      const baseName = parts.slice(0, 2).join('.'); // "Head.Frontal region"
+      if (!grouped[baseName]) {
+        const data = anatomyData[key] || skeletonAnatomyData[key];
+        const cleanLabel = data.name.replace(/(Left|Right|Central)\s*/i, '');
+        grouped[baseName] = {
+          name: cleanLabel,
+          system: data.system,
+          keys: []
+        };
+      }
+      grouped[baseName].keys.push(key);
+    });
+
+    return Object.values(grouped); // returns list of { name, system, keys: [] }
+  };
+
+  // Performs command processing and AI/Offline tutoring queries
+  const triggerSlashCommand = async (userText, currentMessages = messages) => {
+    if (isPending) return;
+
+    // Check if query matches any regions/systems in SOMA
+    const matchedRegions = findMatchingRegions(userText);
+
+    if (matchedRegions.length > 0) {
+      const allKeys = matchedRegions.flatMap(r => r.keys);
+      const newMessages = [...currentMessages, { role: 'user', text: userText }];
+      setMessages(newMessages);
       
-      // Let's check if it's a system name (case-insensitive)
-      const matchedSystem = systems.find(
-        sys => sys.toLowerCase() === commandBody.toLowerCase()
-      );
-
-      if (matchedSystem) {
-        // Find all organs in this system
-        const organIds = Object.keys(anatomyData).filter(
-          key => anatomyData[key].system.toLowerCase() === matchedSystem.toLowerCase()
-        );
-        
-        setActiveOrgan(null);
-        setHighlightedOrgans(organIds);
-        
-        setMessages([
-          ...newMessages,
-          {
-            role: 'command_result',
-            label: `${matchedSystem} System`,
-            organIds: organIds
-          }
-        ]);
+      // If exactly one region matched (e.g. Left/Right Frontal Region)
+      if (matchedRegions.length === 1) {
+        handleSelectOrgan(matchedRegions[0].keys[0]);
+        // Also highlight all keys of this region (both sides)
+        setHighlightedOrgans(matchedRegions[0].keys);
         return;
       }
 
-      // If it's not a system, it might be a comma-separated list of region names or IDs
-      const parts = commandBody.split(',').map(p => p.trim()).filter(Boolean);
-      const matchedOrganIds = [];
-      const matchedNames = [];
+      // Highlight all matched keys
+      setActiveOrgan(null);
+      setHighlightedOrgans(allKeys);
 
-      parts.forEach(part => {
-        // Find all keys in anatomyData where name or ID contains the query case-insensitively
-        // This naturally handles "if they don't specify left or right, match both!"
-        const matchesForPart = Object.keys(anatomyData).filter(key => {
-          const data = anatomyData[key];
-          return data.name.toLowerCase().includes(part.toLowerCase()) || 
-                 data.id.toLowerCase().includes(part.toLowerCase());
-        });
-
-        matchesForPart.forEach(matchKey => {
-          if (!matchedOrganIds.includes(matchKey)) {
-            matchedOrganIds.push(matchKey);
-            matchedNames.push(anatomyData[matchKey].name);
-          }
-        });
+      // Build chat response with list of regions and descriptions
+      let responseText = `### 🔍 Matches found for "${userText}":\n`;
+      matchedRegions.forEach((r) => {
+        const data = anatomyData[r.keys[0]] || skeletonAnatomyData[r.keys[0]];
+        responseText += `* **${r.name}** (${r.system} System): ${data.description}\n`;
       });
 
-      if (matchedOrganIds.length > 0) {
-        setActiveOrgan(null);
-        setHighlightedOrgans(matchedOrganIds);
-        
-        setMessages([
-          ...newMessages,
-          {
-            role: 'command_result',
-            label: matchedNames.length > 3 ? `${matchedNames.slice(0, 3).join(', ')} ... and ${matchedNames.length - 3} more` : matchedNames.join(', '),
-            organIds: matchedOrganIds
-          }
-        ]);
-        return;
-      }
+      responseText += `\n*Note: Found ${matchedRegions.length} matching regions. Click the button below to take an interactive tour.*`;
 
-      // No matches found for slash command
       setMessages([
         ...newMessages,
         {
           role: 'ai',
-          text: `Unknown command or region matching **"${commandBody}"**. \n\nTry using a system category (like \`/head\`, \`/abdomen\`, \`/neck\`) or specific region keywords (like \`/Epigastric Region\` or \`/Left Epigastric Region, Left Umbilical Region\`).`
+          text: responseText,
+          tourRegions: matchedRegions
         }
       ]);
       return;
     }
 
     setIsPending(true);
+    const newMessages = [...currentMessages, { role: 'user', text: userText }];
+    setMessages(newMessages);
 
     if (apiKey) {
       // ONLINE MODE: Call Gemini
@@ -211,14 +277,16 @@ function App() {
         ]);
 
         if (response.highlight) {
-          // Verify it's a valid node name
+          // Verify it's a valid node name (either body or skeleton)
           const matchedNode = Object.keys(anatomyData).find(
+            key => key.toLowerCase() === response.highlight.toLowerCase() || 
+                   key.toLowerCase().includes(response.highlight.toLowerCase())
+          ) || Object.keys(skeletonAnatomyData).find(
             key => key.toLowerCase() === response.highlight.toLowerCase() || 
                    key.toLowerCase().includes(response.highlight.toLowerCase())
           );
           if (matchedNode) {
-            setActiveOrgan(matchedNode);
-            setHighlightedOrgans([]); // Clear bulk highlights
+            handleSelectOrgan(matchedNode);
           }
         }
       } catch (error) {
@@ -239,66 +307,197 @@ function App() {
     }
   };
 
+  // Perform search / AI query from Form submission
+  const handleSendQuery = async (e) => {
+    e?.preventDefault();
+    if (!input.trim() || isPending) return;
+
+    const userText = input.trim();
+    setInput('');
+    triggerSlashCommand(userText);
+  };
+
   // Search local knowledge base for matches
   const triggerOfflineSearch = (query, currentMessages) => {
     const lowerQuery = query.toLowerCase();
+    
+    // 1. Detect query intent
+    const isClinical = ['pain', 'hurt', 'clinical', 'disease', 'symptom', 'sign', 'effect', 'problem', 'doctor', 'medical', 'condition', 'significance', 'pathology', 'fracture'].some(word => lowerQuery.includes(word));
+    const isFunction = ['function', 'do', 'role', 'work', 'action', 'use', 'purpose', 'job', 'mechanism', 'physiology'].some(word => lowerQuery.includes(word));
+    
     let bestMatchKey = null;
     let matchScore = 0;
+    let isSkeletonMatch = false;
 
-    // Look for exact/partial name matches in our 256 keys
+    // Look for exact/partial name matches in our body keys
     Object.keys(anatomyData).forEach(key => {
       const data = anatomyData[key];
       const name = data.name.toLowerCase();
-      const system = data.system.toLowerCase();
       
       let score = 0;
       if (lowerQuery.includes(name)) score += 10;
       if (lowerQuery.includes(data.id.toLowerCase())) score += 8;
-      if (lowerQuery.includes(data.description.split(' ')[0].toLowerCase())) score += 3;
       
-      // Keywords matches
       const cleanRegionName = data.name.replace(/(Left|Right|Central)/, '').trim().toLowerCase();
       if (lowerQuery.includes(cleanRegionName)) score += 5;
 
       if (score > matchScore) {
         matchScore = score;
         bestMatchKey = key;
+        isSkeletonMatch = false;
+      }
+    });
+
+    // Look for exact/partial name matches in our skeleton keys
+    Object.keys(skeletonAnatomyData).forEach(key => {
+      const data = skeletonAnatomyData[key];
+      const name = data.name.toLowerCase();
+      
+      let score = 0;
+      if (lowerQuery.includes(name)) score += 10;
+      if (lowerQuery.includes(data.id.toLowerCase())) score += 8;
+      
+      const cleanRegionName = data.name.replace(/(Left|Right|Central)/, '').trim().toLowerCase();
+      if (lowerQuery.includes(cleanRegionName)) score += 5;
+
+      if (score > matchScore) {
+        matchScore = score;
+        bestMatchKey = key;
+        isSkeletonMatch = true;
       }
     });
 
     if (bestMatchKey && matchScore > 0) {
-      const data = anatomyData[bestMatchKey];
+      const data = isSkeletonMatch ? skeletonAnatomyData[bestMatchKey] : anatomyData[bestMatchKey];
       setActiveOrgan(bestMatchKey);
+      setHighlightedOrgans([bestMatchKey]); // Highlight the organ
+      
+      // Look up detailed Blender description
+      let detailedNotes = '';
+      const parts = bestMatchKey.split('.');
+      if (parts.length >= 2) {
+        const regionName = parts[1];
+        if (blenderTexts) {
+          let text = blenderTexts[regionName];
+          if (!text) {
+            const key = Object.keys(blenderTexts).find(k => k.toLowerCase() === regionName.toLowerCase());
+            if (key) text = blenderTexts[key];
+          }
+          if (text) {
+            detailedNotes = text.trim();
+          }
+        }
+      }
+
+      let responseText = '';
+      if (isClinical) {
+        responseText = `### 🏥 Clinical Notes: ${data.name}
+**Primary Clinical Significance:**
+> ${data.clinical}
+
+---
+**Overview:**
+${data.description}
+
+**Functional Role:**
+${data.function}
+`;
+      } else if (isFunction) {
+        responseText = `### ⚙️ Functional Role: ${data.name}
+**Primary Function:**
+> ${data.function}
+
+---
+**Overview:**
+${data.description}
+
+**Clinical Significance:**
+${data.clinical}
+`;
+      } else {
+        responseText = `### 📘 ${data.name} (${data.system} System)
+**Description:**
+${data.description}
+
+**Function:**
+${data.function}
+
+**Clinical Significance:**
+${data.clinical}
+`;
+      }
+
+      if (detailedNotes) {
+        // Strip duplicate header titles from Blender notes if they are parenthesized
+        const cleanedNotes = detailedNotes.replace(/^\([^)]+\)\s*/gi, '');
+        responseText += `\n\n**Detailed Structure & Anatomy (from Blender):**\n${cleanedNotes}`;
+      }
+
+      responseText += `\n\n*Note: Running in offline lookup mode. Configure a Gemini API key in settings for interactive tutoring.*`;
+
       setMessages([
         ...currentMessages,
         {
           role: 'ai',
-          text: `### ${data.name} (${data.system} System)
-**Description:** ${data.description}
-
-**Function:** ${data.function}
-
-**Clinical Significance:** ${data.clinical}
-
-*Note: Running in offline dictionary mode. Set API key for interactive questions.*`
+          text: responseText
         }
       ]);
     } else {
-      // General fallback reply
+      // Find suggestions (fuzzy search for related regions)
+      const suggestions = [];
+      const queryWords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+      
+      if (queryWords.length > 0) {
+        const checkSuggest = (key, data) => {
+          const name = data.name.toLowerCase();
+          const matches = queryWords.filter(word => name.includes(word) || key.toLowerCase().includes(word));
+          if (matches.length > 0 && !suggestions.some(s => s.key === key)) {
+            suggestions.push({ key, name: data.name, score: matches.length });
+          }
+        };
+
+        Object.keys(anatomyData).forEach(key => checkSuggest(key, anatomyData[key]));
+        Object.keys(skeletonAnatomyData).forEach(key => checkSuggest(key, skeletonAnatomyData[key]));
+        suggestions.sort((a, b) => b.score - a.score);
+      }
+
+      let responseText = `I couldn't find a specific anatomical region matching **"${query}"** in the offline dictionary.\n\n`;
+      
+      if (suggestions.length > 0) {
+        responseText += `Here are some related regions you can explore:`;
+        suggestions.slice(0, 5).forEach(s => {
+          responseText += `\n* Click /${s.name} to view details and highlight the region.`;
+        });
+      } else {
+        responseText += `Try checking out these popular anatomical systems and regions:
+* Click /head to show all regions in the Head.
+* Click /abdomen to show all regions in the Abdomen.
+* Click /Femur to inspect the thigh bone.
+* Click /Frontal bone to inspect the skull forehead.`;
+      }
+
+      responseText += `\n\n💡 **Tip:** Set your **Gemini API Key** in settings (gear icon) to enable full conversational tutoring and get answers to any medical question!`;
+
       setMessages([
         ...currentMessages,
         {
           role: 'ai',
-          text: `I couldn't find a specific anatomical region matching **"${query}"** in my offline dictionary. \n\nTry asking about regions like: *Frontal region*, *Carotid triangle*, *Umbilical region*, or *Deltoid region*, or select them directly on the 3D model.`
+          text: responseText
         }
       ]);
     }
   };
 
-  // Helper to get meshes belonging to the selected system
-  const systemMeshes = Object.values(anatomyData).filter(
+  // Helper to get meshes belonging to the selected system from active layers
+  const bodyMeshes = showBody ? Object.values(anatomyData).filter(
     item => item.system === selectedSystem
-  );
+  ) : [];
+
+  const skeletonMeshes = showSkeleton ? Object.values(skeletonAnatomyData).filter(
+    item => item.system === selectedSystem
+  ) : [];
+
+  const systemMeshes = [...bodyMeshes, ...skeletonMeshes];
 
   // Reset anatomical model camera focus
   const handleResetCamera = () => {
@@ -306,7 +505,91 @@ function App() {
     setHighlightedOrgans([]); // Clear bulk highlights on reset
   };
 
-  const activeOrganData = activeOrgan ? anatomyData[activeOrgan] : null;
+  const activeOrganData = activeOrgan ? (anatomyData[activeOrgan] || skeletonAnatomyData[activeOrgan]) : null;
+
+  const cleanDisplayName = (name) => {
+    if (!name) return '';
+    let clean = name;
+    // 1. Strip l/r sides separated by dot or underscore
+    clean = clean.replace(/[\._][lr](?=\b|[\._]|$)/i, '');
+    // 2. Strip trailing numerical suffixes like .001, _2, 001_2, .001_2
+    clean = clean.replace(/[\._\s]?\d+[\._\s\d]*$/, '');
+    // 3. Strip digits attached directly to word ends, e.g. region001 -> region
+    clean = clean.replace(/(\D)\d+$/, '$1');
+
+    const parts = clean.split('.');
+    if (parts.length >= 2) {
+      let regionName = parts[1];
+      // Replace underscores with spaces and trim
+      regionName = regionName.replace(/_/g, ' ').trim();
+      if (regionName) {
+        regionName = regionName.charAt(0).toUpperCase() + regionName.slice(1);
+      }
+      return regionName;
+    }
+    
+    clean = clean.replace(/_/g, ' ').trim();
+    if (clean) {
+      clean = clean.charAt(0).toUpperCase() + clean.slice(1);
+    }
+    return clean;
+  };
+
+  // Extract region/bone name and match it with Blender text descriptions
+  const getDetailedDesc = () => {
+    if (!activeOrgan) return null;
+    const parts = activeOrgan.split('.');
+    if (parts.length < 2) return null;
+    const regionName = parts[1];
+    let text = blenderTexts[regionName];
+    if (!text) {
+      const key = Object.keys(blenderTexts).find(k => k.toLowerCase() === regionName.toLowerCase());
+      if (key) text = blenderTexts[key];
+    }
+    return text;
+  };
+  const detailedDesc = getDetailedDesc();
+
+  const renderLineWithClickableSlashCommands = (line, idx, isListItem = false) => {
+    const regex = /(\/[a-zA-Z0-9.()_-]+(?:\s[a-zA-Z0-9.()_-]+)*)/g;
+    const parts = line.split(regex);
+    
+    const content = parts.map((part, pIdx) => {
+      if (part.startsWith('/')) {
+        return (
+          <button
+            key={pIdx}
+            onClick={() => {
+              triggerSlashCommand(part);
+            }}
+            style={{
+              background: '#eff6ff',
+              border: '1px solid #3b82f6',
+              color: '#2563eb',
+              borderRadius: '4px',
+              padding: '2px 6px',
+              fontSize: '11px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              margin: '0 2px',
+              display: 'inline-block',
+              lineHeight: '1.2'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.background = '#dbeafe'}
+            onMouseOut={(e) => e.currentTarget.style.background = '#eff6ff'}
+          >
+            {part}
+          </button>
+        );
+      }
+      return part;
+    });
+
+    if (isListItem) {
+      return <li key={idx} style={{ marginLeft: '12px', marginBottom: '2px' }}>{content}</li>;
+    }
+    return <span key={idx}>{content}<br/></span>;
+  };
 
   return (
     <div style={isMobile ? { 
@@ -415,63 +698,7 @@ function App() {
           </div>
         </div>
 
-        {/* Active Organ Detail Card */}
-        {activeOrganData ? (
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', color: '#3b82f6', background: '#dbeafe', padding: '2px 6px', borderRadius: '4px' }}>
-                  {activeOrganData.system}
-                </span>
-                <h3 style={{ margin: '6px 0 2px 0', fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
-                  {activeOrganData.name}
-                </h3>
-              </div>
-              <button 
-                onClick={handleResetCamera}
-                style={{ fontSize: '11px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#64748b', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}
-              >
-                Clear Focus
-              </button>
-            </div>
-            
-            <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#475569', lineHeight: '1.4' }}>
-              <strong>Description:</strong> {activeOrganData.description}
-            </p>
-            
-            <button
-              onClick={() => {
-                setInput(`Explain the clinical significance and structure of the ${activeOrganData.name}`);
-              }}
-              style={{
-                marginTop: '10px',
-                width: '100%',
-                padding: '6px',
-                background: '#ffffff',
-                border: '1px solid #3b82f6',
-                color: '#2563eb',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.background = '#eff6ff';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.background = '#ffffff';
-              }}
-            >
-              Ask tutor about this region
-            </button>
-          </div>
-        ) : (
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '13px', background: '#f8fafc' }}>
-            <Info size={16} />
-            <span>Click any body part in the 3D model to inspect.</span>
-          </div>
-        )}
+
 
         {/* Chat History Panel */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -551,11 +778,51 @@ function App() {
                       return <h4 key={idx} style={{ margin: '8px 0 4px 0', fontSize: '14px', fontWeight: '700' }}>{line.replace('### ', '')}</h4>;
                     }
                     if (line.startsWith('* ')) {
-                      return <li key={idx} style={{ marginLeft: '12px', marginBottom: '2px' }}>{line.replace('* ', '')}</li>;
+                      return renderLineWithClickableSlashCommands(line.replace('* ', ''), idx, true);
                     }
-                    return <span key={idx}>{line}<br/></span>;
+                    return renderLineWithClickableSlashCommands(line, idx, false);
                   })}
                 </div>
+                {isAi && m.tourRegions && m.tourRegions.length > 1 && (
+                  <button
+                    onClick={() => {
+                      setTourRegions(m.tourRegions);
+                      setTourIndex(0);
+                      setTourActive(true);
+                      setTourPlaying(true);
+                      setManualFocus(false);
+                    }}
+                    style={{
+                      marginTop: '12px',
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.3)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.2)';
+                    }}
+                  >
+                    <Play size={14} fill="#ffffff" />
+                    <span>Take Interactive Tour ({m.tourRegions.length} regions)</span>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -634,7 +901,7 @@ function App() {
         <div style={{ position: 'absolute', top: '16px', left: '16px', zIndex: 10, background: 'rgba(255, 255, 255, 0.95)', border: '1px solid #e2e8f0', padding: '8px 14px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column', gap: '2px', pointerEvents: 'none' }}>
           <span style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', color: '#94a3b8' }}>Hovered Region</span>
           <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
-            {hoveredOrgan ? (anatomyData[hoveredOrgan]?.name || hoveredOrgan) : 'None'}
+            {hoveredOrgan ? (anatomyData[hoveredOrgan]?.name || skeletonAnatomyData[hoveredOrgan]?.name || cleanDisplayName(hoveredOrgan)) : 'None'}
           </span>
         </div>
 
@@ -707,11 +974,165 @@ function App() {
               onSelectOrgan={handleSelectOrgan}
               onHoverOrgan={setHoveredOrgan}
               highlightedOrgans={highlightedOrgans}
+              showBody={showBody}
+              showSkeleton={showSkeleton}
+              showHair={showHair}
             />
 
-            <CameraControls activeOrgan={activeOrgan} highlightedOrgans={highlightedOrgans} />
+            <CameraControls 
+              activeOrgan={activeOrgan} 
+              highlightedOrgans={highlightedOrgans} 
+              zoomToWholeTour={tourActive && !manualFocus}
+              tourRegions={tourRegions}
+            />
             <OrbitControls makeDefault enableDamping dampingFactor={0.05} />
           </Canvas>
+
+          {/* Glassmorphic Tour Controls Overlay */}
+          {tourActive && tourRegions.length > 0 && tourRegions[tourIndex] && (
+            <div style={{
+              position: 'absolute',
+              bottom: '24px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 50,
+              background: 'rgba(255, 255, 255, 0.85)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
+              borderRadius: '12px',
+              padding: '16px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              minWidth: '300px',
+              maxWidth: '90%',
+              boxSizing: 'border-box'
+            }}>
+              {/* Tour Progress Info */}
+              <div style={{ textAlign: 'center', width: '100%' }}>
+                <div style={{ fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', color: '#3b82f6', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                  Anatomy Tour ({tourRegions[tourIndex].system} System)
+                </div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', color: '#0f172a' }}>
+                  {tourRegions[tourIndex].name}
+                </h4>
+                <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                  Step {tourIndex + 1} of {tourRegions.length}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                {/* Prev Button */}
+                <button
+                  onClick={() => {
+                    setTourPlaying(false);
+                    setManualFocus(false);
+                    setTourIndex((prev) => (prev > 0 ? prev - 1 : tourRegions.length - 1));
+                  }}
+                  title="Previous Step"
+                  style={{
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#ffffff'}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {/* Play/Pause Button */}
+                <button
+                  onClick={() => {
+                    setTourPlaying(!tourPlaying);
+                    setManualFocus(false);
+                  }}
+                  title={tourPlaying ? "Pause Autoplay" : "Play Autoplay"}
+                  style={{
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    cursor: 'pointer',
+                    padding: '12px',
+                    borderRadius: '50%',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 4px 6px rgba(37, 99, 235, 0.2)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  {tourPlaying ? <Pause size={18} fill="#ffffff" /> : <Play size={18} fill="#ffffff" />}
+                </button>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => {
+                    setTourPlaying(false);
+                    setManualFocus(false);
+                    setTourIndex((prev) => (prev < tourRegions.length - 1 ? prev + 1 : 0));
+                  }}
+                  title="Next Step"
+                  style={{
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    borderRadius: '50%',
+                    color: '#475569',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                  onMouseOut={(e) => e.currentTarget.style.background = '#ffffff'}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* Exit Tour Button */}
+              <button
+                onClick={() => {
+                  setTourActive(false);
+                  setTourPlaying(false);
+                  setManualFocus(false);
+                  handleResetCamera();
+                }}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#ef4444',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.background = '#fee2e2'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                Exit Tour
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -780,6 +1201,42 @@ function App() {
           >
             <Settings size={18} />
           </button>
+        </div>
+
+        {/* Layer Visibility Controls */}
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', color: '#94a3b8', letterSpacing: '0.05em' }}>
+            Model Layers
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={showBody} 
+                onChange={(e) => setShowBody(e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
+              />
+              <span>Body Mesh</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={showSkeleton} 
+                onChange={(e) => setShowSkeleton(e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
+              />
+              <span>Skeleton</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={showHair} 
+                onChange={(e) => setShowHair(e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
+              />
+              <span>Hair</span>
+            </label>
+          </div>
         </div>
 
         {/* System Category Tabs */}

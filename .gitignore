@@ -25,3 +25,6 @@ dist-ssr
 
 # AI Process files
 process.md
+
+# Local scripts
+start_server.bat

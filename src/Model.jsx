@@ -3,9 +3,10 @@ import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, highlightedOrgans = [] }) {
-  // Load the glTF model from the public directory
+export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, highlightedOrgans = [], showBody = true, showSkeleton = false, showHair = true }) {
+  // Load the glTF models from the public directory
   const { scene } = useGLTF('/human_model.glb');
+  const skeleton = useGLTF('/SkeletonJoints.glb');
   const [hoveredMeshName, setHoveredMeshName] = useState(null);
   const modelRef = useRef();
 
@@ -53,19 +54,55 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
         child.receiveShadow = true;
       }
     });
-  }, [scene]);
+
+    // Configure skeleton scene shadows and material settings
+    if (skeleton && skeleton.scene) {
+      skeleton.scene.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+          
+          // Apply a clean matte bone material to fix the black rendering issue
+          // We check if the material is already replaced to avoid recreating it
+          if (!(child.material instanceof THREE.MeshStandardMaterial) || child.material.name !== 'soma-bone') {
+            child.material = new THREE.MeshStandardMaterial({
+              name: 'soma-bone',
+              color: new THREE.Color('#eae6df'), // Clean, realistic ivory/bone-white
+              roughness: 0.8,
+              metalness: 0.05,
+              side: THREE.DoubleSide // Ensure bones render double-sided for internal inspection
+            });
+          }
+        }
+      });
+    }
+  }, [scene, skeleton]);
 
   // Update materials based on hover and selection state
   useEffect(() => {
+    const shareParentRegion = (name1, name2) => {
+      if (!name1 || !name2) return false;
+      const base1 = name1.split('.').slice(0, 2).join('.').toLowerCase();
+      const base2 = name2.split('.').slice(0, 2).join('.').toLowerCase();
+      return base1 === base2;
+    };
+
+    // 1. Update Body scene materials
     scene.traverse((child) => {
       if (child.isMesh) {
-        const isSelected = child.name === activeOrgan || highlightedOrgans.includes(child.name);
-        const isHovered = child.name === hoveredOrgan || child.name === hoveredMeshName;
+        // Toggle visibility of hair meshes based on showHair state
+        const isHair = child.name.startsWith('Hair.');
+        if (isHair) {
+          child.visible = showHair;
+        }
+
+        const isSelected = child.name === activeOrgan || highlightedOrgans.includes(child.name) || shareParentRegion(child.name, activeOrgan);
+        const isHovered = child.name === hoveredOrgan || child.name === hoveredMeshName || shareParentRegion(child.name, hoveredOrgan) || shareParentRegion(child.name, hoveredMeshName);
         const orig = originalMaterialsRef.current.get(child.name);
 
         if (isSelected) {
-          // Formal selected state: Medium-dark corporate blue (solid color)
-          child.material.color.set('#3b82f6'); // Clean Slate Blue
+          // Selected state: Medium-dark corporate blue (solid color)
+          child.material.color.set('#3b82f6');
           child.material.map = null;
           child.material.normalMap = null;
           child.material.bumpMap = null;
@@ -77,8 +114,8 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
           if ('metalness' in child.material) child.material.metalness = 0.2;
           child.material.needsUpdate = true;
         } else if (isHovered) {
-          // Formal hovered state: Soft light blue (solid color)
-          child.material.color.set('#cbd5e1'); // Light grey-blue
+          // Hovered state: Soft light blue (solid color)
+          child.material.color.set('#cbd5e1');
           child.material.map = null;
           child.material.normalMap = null;
           child.material.bumpMap = null;
@@ -114,7 +151,43 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
         }
       }
     });
-  }, [activeOrgan, hoveredOrgan, hoveredMeshName, scene, highlightedOrgans]);
+
+    // 2. Update Skeleton scene materials
+    if (skeleton && skeleton.scene) {
+      skeleton.scene.traverse((child) => {
+        if (child.isMesh) {
+          const isSelected = child.name === activeOrgan || highlightedOrgans.includes(child.name) || shareParentRegion(child.name, activeOrgan);
+          const isHovered = child.name === hoveredOrgan || child.name === hoveredMeshName || shareParentRegion(child.name, hoveredOrgan) || shareParentRegion(child.name, hoveredMeshName);
+
+          if (isSelected) {
+            // Selected state for bones: Medium-dark corporate blue (solid color)
+            child.material.color.set('#3b82f6');
+            child.material.opacity = 1.0;
+            child.material.transparent = false;
+            child.material.roughness = 0.4;
+            child.material.metalness = 0.2;
+            child.material.needsUpdate = true;
+          } else if (isHovered) {
+            // Hovered state for bones: Soft light blue (solid color)
+            child.material.color.set('#cbd5e1');
+            child.material.opacity = 0.95;
+            child.material.transparent = true;
+            child.material.roughness = 0.6;
+            child.material.metalness = 0.1;
+            child.material.needsUpdate = true;
+          } else {
+            // Normal bone state: Clean matte bone-white
+            child.material.color.set('#eae6df');
+            child.material.opacity = 1.0;
+            child.material.transparent = false;
+            child.material.roughness = 0.8;
+            child.material.metalness = 0.05;
+            child.material.needsUpdate = true;
+          }
+        }
+      });
+    }
+  }, [activeOrgan, hoveredOrgan, hoveredMeshName, scene, skeleton, highlightedOrgans, showHair]);
 
   // Handle pointer interactions
   const handlePointerMove = (e) => {
@@ -145,17 +218,27 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
   };
 
   return (
-    <primitive
-      ref={modelRef}
-      object={scene}
-      scale={1.4}
-      position={[0, -1.2, 0]}
-      onPointerMove={handlePointerMove}
-      onPointerOut={handlePointerOut}
-      onPointerDown={handlePointerDown}
-    />
+    <group ref={modelRef} scale={1.4} position={[0, -1.2, 0]}>
+      {showBody && (
+        <primitive
+          object={scene}
+          onPointerMove={handlePointerMove}
+          onPointerOut={handlePointerOut}
+          onPointerDown={handlePointerDown}
+        />
+      )}
+      {showSkeleton && (
+        <primitive
+          object={skeleton.scene}
+          onPointerMove={handlePointerMove}
+          onPointerOut={handlePointerOut}
+          onPointerDown={handlePointerDown}
+        />
+      )}
+    </group>
   );
 }
 
-// Pre-load the glTF file for better responsiveness
+// Pre-load the glTF files for better responsiveness
 useGLTF.preload('/human_model.glb');
+useGLTF.preload('/SkeletonJoints.glb');

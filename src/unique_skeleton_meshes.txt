@@ -1,0 +1,396 @@
+Acetabular labrum
+Acromioclavicular ligament
+Annular ligament of radius
+Anterior cells of ethmoid bone
+Anterior cruciate ligament
+Anterior ligament of fibular head
+Anterior longitudinal ligament
+Anterior meniscotibial ligament (Lateral meniscus)
+Anterior meniscotibial ligament (Medial meniscus)
+Anterior sacro-iliac ligament
+Anterior sternoclavicular ligament
+Anterior talocalcaneal ligament
+Anterior talofibular ligament
+Anterior tibiofibular ligament
+Arcuate popliteal ligament
+Articular capsule of acromioclavicular joint
+Articular capsule of elbow joint
+Articular capsule of glenohumeral joint
+Articular capsule of hip joint
+Articular capsule of interphalangeal joint of great toe
+Articular capsule of knee joint
+Articular capsule of radiocarpal joint
+Articular capsule of sternoclavicular joint
+Articular capsule of superior tibiofibular joint
+Articular capsule of temporomandibular joint
+Articular capsules of distal interphalangeal joints
+Articular capsules of distal interphalangeal joints of foot
+Articular capsules of metacarpophalangeal joints
+Articular capsules of metatarsophalangeal joints
+Articular capsules of proximal interphalangeal joints
+Articular capsules of proximal interphalangeal joints of foot
+Articular disc of acromioclavicular joint
+Articular disc of distal radio-ulnar joint
+Articular disc of sternoclavicular joint
+Articular disc of temporomandibular joint
+Arytenoid cartilage
+Atlas (C1)
+Axis (C2)
+Body of sternum
+Calcaneocuboid ligament
+Calcaneofibular ligament
+Calcaneonavicular ligament
+Calcaneus.r
+Capitate bone
+Capitohamate interosseous ligament
+Clavicle
+Coccyx
+Collateral interphalangeal ligaments of foot
+Collateral interphalangeal ligaments of hand
+Collateral metacarpophalangeal ligaments
+Collateral metatarsophalangeal ligaments
+Conoid ligament
+Coraco-acromial ligament
+Coracohumeral ligament
+Corniculate cartilage.r
+Costal cartilage of eighth rib
+Costal cartilage of fifth rib
+Costal cartilage of first rib
+Costal cartilage of fourth rib
+Costal cartilage of ninth rib
+Costal cartilage of second rib
+Costal cartilage of seventh rib
+Costal cartilage of sixth rib
+Costal cartilage of tenth rib
+Costal cartilage of third rib
+Costoclavicular ligament
+Costotransverse ligament
+Cricoid cartilage
+Cricopharyngeal ligament
+Cuboid bone
+Cuneocuboid interosseous ligament
+Cuneometatarsal interosseous ligaments
+Deep part of tibial collateral ligament
+Deep transverse metacarpal ligament
+Deep transverse metatarsal ligament
+Descending part of iliofemoral ligament
+Distal phalanx of fifth finger of foot
+Distal phalanx of fifth finger of hand.r
+Distal phalanx of first finger of foot
+Distal phalanx of first finger of hand
+Distal phalanx of fourth finger of foot
+Distal phalanx of fourth finger of hand
+Distal phalanx of second finger of foot
+Distal phalanx of second finger of hand
+Distal phalanx of third finger of foot
+Distal phalanx of third finger of hand
+Dorsal calcaneocuboid ligament
+Dorsal carpometacarpal ligaments
+Dorsal cuboideonavicular ligament
+Dorsal cuneocuboid ligament
+Dorsal cuneonavicular ligaments
+Dorsal intercarpal ligaments
+Dorsal intercuneiform ligaments
+Dorsal metacarpal ligaments
+Dorsal metatarsal ligaments
+Dorsal radio-ulnar ligament
+Dorsal radiocarpal ligament
+Dorsal scaphotriquetral ligament
+Dorsal tarsometatarsal ligaments
+Dorsal ulnocarpal ligament
+Eighth rib
+Eleventh rib
+Ethmoid bone
+External intercostal membrane
+Femur
+Fibula
+Fibular collateral ligament
+Fifth metacarpal bone
+Fifth metatarsal bone
+Fifth rib
+First metacarpal bone
+First metatarsal bone
+First rib
+Fourth metacarpal bone
+Fourth metatarsal bone
+Fourth rib
+Frenula capsulae
+Frontal bone
+Glenoid labrum
+Hamate bone
+Hip bone
+Humerus
+Hyoid bone
+Iliolumbar ligament
+Incus
+Inferior glenohumeral ligament
+Inferior nasal concha bone
+Inferior pubic ligament
+Inferior transverse scapular ligament
+Infrapatellar fat pad
+Interclavicular ligament
+Intercornual ligament
+Intercuneiform interosseous ligaments
+Intermediate cuneiform bone.r
+Internal intercostal membrane
+Interosseous membrane of forearm
+Interosseous membrane of leg
+Interosseous metacarpal ligaments
+Interosseous sacro-iliac ligament
+Interpubic disc
+Intersesamoid ligament
+Interspinous ligaments
+Intertransverse ligaments
+Intervertebral disc C2-C3
+Intervertebral disc C3-C4
+Intervertebral disc C4-C5
+Intervertebral disc C5-C6
+Intervertebral disc C6-C7
+Intervertebral disc C7-T1
+Intervertebral disc L1-L2
+Intervertebral disc L2-L3
+Intervertebral disc L3-L4
+Intervertebral disc L4-L5
+Intervertebral disc L5-S1
+Intervertebral disc T1-T2
+Intervertebral disc T10-T11
+Intervertebral disc T11-T12
+Intervertebral disc T12-L1
+Intervertebral disc T2-T3
+Intervertebral disc T3-T4
+Intervertebral disc T4-T5
+Intervertebral disc T5-T6
+Intervertebral disc T6-T7
+Intervertebral disc T7-T8
+Intervertebral disc T8-T9
+Intervertebral disc T9-T10
+Intra-articular ligament of head of rib
+Ischiofemoral ligament
+Lacrimal bone
+Lateral cuneiform bone.r
+Lateral meniscus
+Lateral process of nasal septal cartilage
+Lateral talocalcaneal ligament
+Lateral temporomandibular ligament
+Lateral thyrohyoid ligament
+Ligament of head of femur
+Ligamenta flava
+Long plantar ligament
+Lower canine
+Lower first molar tooth
+Lower first premolar
+Lower lateral incisor
+Lower medial incisor
+Lower second molar tooth
+Lower second premolar
+Lunate bone
+Lunotriquetral interosseous ligament
+Major alar cartilage
+Malleus
+Mandible
+Manubrium of sternum
+Maxilla
+Medial cuneiform bone.r
+Medial meniscus
+Medial talocalcaneal ligament
+Median cricothyroid ligament
+Median thyrohyoid ligament
+Meniscopatellar ligament
+Metatarsal interosseous ligaments
+Middle cells of ethmoid bone
+Middle glenohumeral ligament
+Middle phalanx of fifth finger of foot
+Middle phalanx of fifth finger of hand
+Middle phalanx of fourth finger of foot
+Middle phalanx of fourth finger of hand
+Middle phalanx of second finger of foot
+Middle phalanx of second finger of hand
+Middle phalanx of third finger of foot
+Middle phalanx of third finger of hand
+Nasal bone
+Nasal septal cartilage
+Navicular bone
+Ninth rib
+Nuchal ligament
+Nucleus pulposus C2-C3
+Nucleus pulposus C3-C4
+Nucleus pulposus C4-C5
+Nucleus pulposus C5-C6
+Nucleus pulposus C6-C7
+Nucleus pulposus C7-T1
+Nucleus pulposus L1-L2
+Nucleus pulposus L2-L3
+Nucleus pulposus L3-L4
+Nucleus pulposus L4-L5
+Nucleus pulposus L5-S1
+Nucleus pulposus T1-T2
+Nucleus pulposus T10-T11
+Nucleus pulposus T11-T12
+Nucleus pulposus T12-L1
+Nucleus pulposus T2-T3
+Nucleus pulposus T3-T4
+Nucleus pulposus T4-T5
+Nucleus pulposus T5-T6
+Nucleus pulposus T6-T7
+Nucleus pulposus T7-T8
+Nucleus pulposus T8-T9
+Nucleus pulposus T9-T10
+Oblique cord
+Oblique popliteal ligament
+Obturator membrane
+Occipital bone
+Palatine bone
+Palmar capitohamate ligament
+Palmar carpometacarpal ligaments
+Palmar interphalangeal ligaments
+Palmar lunotriquetral ligament
+Palmar metacarpal ligaments
+Palmar radio-ulnar ligament
+Palmar scaphotriquetral ligament
+Palmar trapezoideocapitate ligament
+Parietal bone.l
+Parietal bone.r
+Patella
+Pisiform bone
+Pisohamate ligament
+Pisometacarpal ligament
+Pisotriquetral ligament
+Plantar calcaneocuboid ligament
+Plantar calcaneonavicular ligament
+Plantar cuboideonavicular ligament
+Plantar cuneocuboid ligament
+Plantar cuneonavicular ligaments
+Plantar intercuneiform ligaments
+Plantar interphalangeal ligaments
+Plantar metatarsal ligaments
+Plantar metatarsophalangeal ligaments
+Plantar tarsometatarsal ligaments
+Popliteofibular ligament
+Posterior cells of ethmoid bone
+Posterior cruciate ligament
+Posterior ligament of fibular head
+Posterior longitudinal ligament
+Posterior meniscotibial ligament (Lateral meniscus)
+Posterior meniscotibial ligament (Medial meniscus)
+Posterior sacro-iliac ligament
+Posterior sternoclavicular ligament
+Posterior talocalcaneal ligament
+Posterior talofibular ligament
+Posterior tibiofibular ligament
+Posterior tibiotalar ligament
+Proximal phalanx of fifth finger of foot
+Proximal phalanx of fifth finger of hand
+Proximal phalanx of first finger of foot
+Proximal phalanx of first finger of hand
+Proximal phalanx of fourth finger of foot
+Proximal phalanx of fourth finger of hand
+Proximal phalanx of second finger of foot
+Proximal phalanx of second finger of hand
+Proximal phalanx of third finger of foot
+Proximal phalanx of third finger of hand
+Pterygospinous ligament
+Pubic symphysis
+Pubofemoral ligament
+Quadrangular membrane
+Quadrate ligament
+Radial collateral ligament
+Radial collateral ligament of wrist joint
+Radiate carpal ligament
+Radiate ligament of head of rib
+Radiocapitate ligament
+Radioscaphocapitate ligament
+Radius
+Sacrococcygeal symphysis
+Sacrospinous ligament
+Sacrotuberous ligament
+Sacrum
+Scaphocapitate ligament
+Scaphoid bone
+Scapholunate interosseous ligament
+Scaphotrapeziotrapezoidal ligament
+Scapula
+Second metacarpal bone
+Second metatarsal bone
+Second rib
+Sesamoid bones of foot
+Seventh rib
+Sinus of frontal bone
+Sinus of sphenoid bone
+Sixth rib
+Sphenoid bone.l
+Sphenomandibular ligament
+Stapes
+Stylohyoid ligament
+Stylomandibular ligament
+Superficial part of tibial collateral ligament
+Superior glenohumeral ligament
+Superior pubic ligament
+Superior transverse scapular ligament
+Supraspinous ligament
+Talocalcaneal interosseous ligament
+Talonavicular ligament
+Talus.r
+Temporal bone
+Tenth rib
+Third metacarpal bone
+Third metatarsal bone
+Third rib
+Thyroid cartilage
+Tibia
+Tibiocalcaneal ligament
+Tibionavicular ligament
+Transverse acetabular ligament
+Transverse humeral ligament
+Transverse ligament of knee
+Transverse part of iliofemoral ligament
+Transverse tibiofibular ligament
+Trapeziotrapezoidal interosseous ligament
+Trapezium bone
+Trapezoid bone
+Trapezoid ligament
+Trapezoideocapitate interosseous ligament
+Triquetrocapitate ligament
+Triquetrohamate ligament
+Triquetrum bone
+Triradiate cartilage
+Twelfth rib
+Ulna
+Ulnar collateral ligament
+Ulnar collateral ligament of wrist joint
+Ulnocapitate ligament
+Ulnolunate ligament
+Ulnopisiform ligament
+Ulnotriquetral ligament
+Upper canine
+Upper first molar tooth
+Upper first premolar
+Upper lateral incisor
+Upper medial incisor
+Upper second molar tooth
+Upper second premolar
+Vertebra C3
+Vertebra C4
+Vertebra C5
+Vertebra C6
+Vertebra C7
+Vertebra L1
+Vertebra L2
+Vertebra L3
+Vertebra L4
+Vertebra L5
+Vertebra T1
+Vertebra T10
+Vertebra T11
+Vertebra T12
+Vertebra T2
+Vertebra T3
+Vertebra T4
+Vertebra T5
+Vertebra T6
+Vertebra T7
+Vertebra T8
+Vertebra T9
+Vomer
+Xiphoid process
+Zona orbicularis
+Zygomatic bone
