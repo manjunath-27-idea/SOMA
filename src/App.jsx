@@ -703,6 +703,7 @@ ${data.clinical}
         <div style={{ 
           display: (isMobile && !chatExpanded) ? 'none' : 'flex',
           flex: 1, 
+          minHeight: '0px',
           overflowY: 'auto', 
           padding: '20px', 
           flexDirection: 'column', 
