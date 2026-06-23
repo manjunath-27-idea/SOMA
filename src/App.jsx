@@ -623,277 +623,6 @@ ${data.clinical}
         />
       )}
 
-      {/* LEFT: CHAT AND ANATOMY PANEL */}
-      <div style={isMobile ? {
-        position: 'absolute',
-        bottom: '16px',
-        left: '16px',
-        right: '16px',
-        zIndex: 100,
-        background: 'rgba(255, 255, 255, 0.5)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255, 255, 255, 0.3)',
-        borderRadius: '12px',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: chatExpanded ? '330px' : '57px',
-        maxHeight: '65vh',
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'hidden'
-      } : { 
-        width: '420px', 
-        minWidth: '420px',
-        maxWidth: '420px',
-        flexShrink: 0,
-        flexGrow: 0,
-        borderRight: '1px solid #e2e8f0', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        background: '#ffffff' 
-      }}>
-        
-        <div 
-          onClick={() => isMobile && setChatExpanded(!chatExpanded)}
-          style={{ 
-            padding: '16px 20px', 
-            borderBottom: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            background: isMobile ? 'transparent' : '#ffffff', 
-            height: '57px', 
-            minHeight: '57px', 
-            flexShrink: 0,
-            boxSizing: 'border-box',
-            cursor: isMobile ? 'pointer' : 'default',
-            userSelect: 'none'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em' }}>SOMA</h2>
-            {isMobile && (
-              <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
-                {chatExpanded ? 'Tap to hide' : 'Tap to chat'}
-              </span>
-            )}
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Mobile-only sidebar toggle */}
-            {isMobile && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSidebarOpen(true);
-                }}
-                title="Expand Sidebar"
-                style={{ border: 'none', background: '#f1f5f9', cursor: 'pointer', padding: '6px', borderRadius: '6px', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <PanelRight size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-
-
-
-        {/* Chat History Panel */}
-        <div style={{ 
-          display: (isMobile && !chatExpanded) ? 'none' : 'flex',
-          flex: 1, 
-          minHeight: '0px',
-          overflowY: 'auto', 
-          padding: '20px', 
-          flexDirection: 'column', 
-          gap: '16px' 
-        }}>
-          {messages.map((m, i) => {
-            if (m.role === 'command_result') {
-              return (
-                <div 
-                  key={i} 
-                  onClick={() => handleTriggerHighlight(m.organIds, m.label)}
-                  style={{ 
-                    alignSelf: 'center', 
-                    background: '#eff6ff', 
-                    color: '#1e40af', 
-                    border: '1px solid #bfdbfe',
-                    borderRadius: '12px',
-                    padding: '10px 14px',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                    transition: 'all 0.2s',
-                    userSelect: 'none',
-                    textAlign: 'center',
-                    width: '90%',
-                    maxWidth: '320px'
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.background = '#dbeafe';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.background = '#eff6ff';
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
-                    <Layers size={14} />
-                    <span>Command Triggered: {m.label}</span>
-                  </div>
-                  <span style={{ fontSize: '11px', opacity: 0.8 }}>
-                    Highlighted {m.organIds.length} regions. Click to rotate & re-highlight.
-                  </span>
-                </div>
-              );
-            }
-            if (m.role === 'system') {
-              return (
-                <div key={i} style={{ alignSelf: 'center', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: '500' }}>
-                  {m.text.replace(/\*\*/g, '')}
-                </div>
-              );
-            }
-            const isAi = m.role === 'ai';
-            return (
-              <div 
-                key={i} 
-                style={{ 
-                  alignSelf: isAi ? 'flex-start' : 'flex-end', 
-                  maxWidth: '85%',
-                  background: isAi ? '#f8fafc' : '#3b82f6',
-                  color: isAi ? '#1e293b' : '#ffffff',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: isAi ? '1px solid #e2e8f0' : 'none',
-                  fontSize: '13px',
-                  lineHeight: '1.5'
-                }}
-              >
-                <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', opacity: 0.7, color: isAi ? '#64748b' : '#dbeafe' }}>
-                  {isAi ? 'Anatomy Tutor' : 'You'}
-                </div>
-                {/* Basic rendering of simple markdown bullets and headers */}
-                <div style={{ whiteSpace: 'pre-line' }}>
-                  {m.text.split('\n').map((line, idx) => {
-                    if (line.startsWith('### ')) {
-                      return <h4 key={idx} style={{ margin: '8px 0 4px 0', fontSize: '14px', fontWeight: '700' }}>{line.replace('### ', '')}</h4>;
-                    }
-                    if (line.startsWith('* ')) {
-                      return renderLineWithClickableSlashCommands(line.replace('* ', ''), idx, true);
-                    }
-                    return renderLineWithClickableSlashCommands(line, idx, false);
-                  })}
-                </div>
-                {isAi && m.tourRegions && m.tourRegions.length > 1 && (
-                  <button
-                    onClick={() => {
-                      setTourRegions(m.tourRegions);
-                      setTourIndex(0);
-                      setTourActive(true);
-                      setTourPlaying(true);
-                      setManualFocus(false);
-                    }}
-                    style={{
-                      marginTop: '12px',
-                      width: '100%',
-                      padding: '8px 12px',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                      border: 'none',
-                      color: '#ffffff',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.3)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.transform = 'none';
-                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.2)';
-                    }}
-                  >
-                    <Play size={14} fill="#ffffff" />
-                    <span>Take Interactive Tour ({m.tourRegions.length} regions)</span>
-                  </button>
-                )}
-              </div>
-            );
-          })}
-          
-          {isPending && (
-            <div style={{ alignSelf: 'flex-start', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '12px 16px', borderRadius: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <RefreshCw size={14} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
-              <span>Tutor is thinking...</span>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input box */}
-        <form 
-          onSubmit={handleSendQuery} 
-          style={{ 
-            display: (isMobile && !chatExpanded) ? 'none' : 'flex',
-            padding: '16px', 
-            borderTop: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', 
-            gap: '8px', 
-            background: isMobile ? 'transparent' : '#ffffff',
-            flexShrink: 0
-          }}
-        >
-          <input 
-            value={input} 
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={activeOrganData ? `Ask about ${activeOrganData.name}...` : "Ask about an organ..."}
-            style={{ 
-              flex: 1, 
-              padding: '10px 14px', 
-              background: '#ffffff', 
-              border: '1px solid #cbd5e1', 
-              borderRadius: '8px', 
-              fontSize: '13px', 
-              color: '#1e293b', 
-              outline: 'none',
-              transition: 'border-color 0.2s'
-            }}
-            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-            onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-          />
-          <button 
-            type="submit" 
-            disabled={isPending || !input.trim()}
-            style={{ 
-              padding: '10px 14px', 
-              background: input.trim() && !isPending ? '#3b82f6' : '#e2e8f0', 
-              color: input.trim() && !isPending ? '#ffffff' : '#94a3b8', 
-              border: 'none', 
-              borderRadius: '8px', 
-              cursor: input.trim() && !isPending ? 'pointer' : 'default',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'background 0.2s'
-            }}
-          >
-            <Send size={16} />
-          </button>
-        </form>
-      </div>
-
       {/* CENTER: 3D HUMAN CANVAS VIEW */}
       <div style={isMobile ? {
         position: 'absolute',
@@ -911,7 +640,8 @@ ${data.clinical}
         position: 'relative', 
         display: 'flex', 
         flexDirection: 'column', 
-        background: '#ffffff'
+        background: '#ffffff',
+        order: 2
       }}>
         
         {/* Floating Tooltip/Hover Banner - Static position relative to left edge */}
@@ -1148,6 +878,276 @@ ${data.clinical}
         </div>
       </div>
 
+      {/* LEFT: CHAT AND ANATOMY PANEL */}
+      <div style={isMobile ? {
+        position: 'absolute',
+        bottom: '16px',
+        left: '16px',
+        right: '16px',
+        zIndex: 100,
+        background: 'rgba(255, 255, 255, 0.5)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
+        borderRadius: '12px',
+        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: chatExpanded ? '330px' : '57px',
+        maxHeight: '65vh',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        overflow: 'hidden'
+      } : { 
+        width: '420px', 
+        minWidth: '420px',
+        maxWidth: '420px',
+        flexShrink: 0,
+        flexGrow: 0,
+        borderRight: '1px solid #e2e8f0', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        background: '#ffffff',
+        order: 1
+      }}>
+        
+        <div 
+          onClick={() => isMobile && setChatExpanded(!chatExpanded)}
+          style={{ 
+            padding: '16px 20px', 
+            borderBottom: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            background: isMobile ? 'transparent' : '#ffffff', 
+            height: '57px', 
+            minHeight: '57px', 
+            flexShrink: 0,
+            boxSizing: 'border-box',
+            cursor: isMobile ? 'pointer' : 'default',
+            userSelect: 'none'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.03em' }}>SOMA</h2>
+            {isMobile && (
+              <span style={{ fontSize: '10px', color: '#94a3b8', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>
+                {chatExpanded ? 'Tap to hide' : 'Tap to chat'}
+              </span>
+            )}
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Mobile-only sidebar toggle */}
+            {isMobile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSidebarOpen(true);
+                }}
+                title="Expand Sidebar"
+                style={{ border: 'none', background: '#f1f5f9', cursor: 'pointer', padding: '6px', borderRadius: '6px', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <PanelRight size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Chat History Panel */}
+        <div style={{ 
+          display: (isMobile && !chatExpanded) ? 'none' : 'flex',
+          flex: 1, 
+          minHeight: '0px',
+          overflowY: 'auto', 
+          padding: '20px', 
+          flexDirection: 'column', 
+          gap: '16px' 
+        }}>
+          {messages.map((m, i) => {
+            if (m.role === 'command_result') {
+              return (
+                <div 
+                  key={i} 
+                  onClick={() => handleTriggerHighlight(m.organIds, m.label)}
+                  style={{ 
+                    alignSelf: 'center', 
+                    background: '#eff6ff', 
+                    color: '#1e40af', 
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '12px',
+                    padding: '10px 14px',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                    transition: 'all 0.2s',
+                    userSelect: 'none',
+                    textAlign: 'center',
+                    width: '90%',
+                    maxWidth: '320px'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.background = '#dbeafe';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.background = '#eff6ff';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+                    <Layers size={14} />
+                    <span>Command Triggered: {m.label}</span>
+                  </div>
+                  <span style={{ fontSize: '11px', opacity: 0.8 }}>
+                    Highlighted {m.organIds.length} regions. Click to rotate & re-highlight.
+                  </span>
+                </div>
+              );
+            }
+            if (m.role === 'system') {
+              return (
+                <div key={i} style={{ alignSelf: 'center', background: '#f1f5f9', color: '#475569', fontSize: '11px', padding: '4px 10px', borderRadius: '12px', fontWeight: '500' }}>
+                  {m.text.replace(/\*\*/g, '')}
+                </div>
+              );
+            }
+            const isAi = m.role === 'ai';
+            return (
+              <div 
+                key={i} 
+                style={{ 
+                  alignSelf: isAi ? 'flex-start' : 'flex-end', 
+                  maxWidth: '85%',
+                  background: isAi ? '#f8fafc' : '#3b82f6',
+                  color: isAi ? '#1e293b' : '#ffffff',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: isAi ? '1px solid #e2e8f0' : 'none',
+                  fontSize: '13px',
+                  lineHeight: '1.5'
+                }}
+              >
+                <div style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px', opacity: 0.7, color: isAi ? '#64748b' : '#dbeafe' }}>
+                  {isAi ? 'Anatomy Tutor' : 'You'}
+                </div>
+                {/* Basic rendering of simple markdown bullets and headers */}
+                <div style={{ whiteSpace: 'pre-line' }}>
+                  {m.text.split('\n').map((line, idx) => {
+                    if (line.startsWith('### ')) {
+                      return <h4 key={idx} style={{ margin: '8px 0 4px 0', fontSize: '14px', fontWeight: '700' }}>{line.replace('### ', '')}</h4>;
+                    }
+                    if (line.startsWith('* ')) {
+                      return renderLineWithClickableSlashCommands(line.replace('* ', ''), idx, true);
+                    }
+                    return renderLineWithClickableSlashCommands(line, idx, false);
+                  })}
+                </div>
+                {isAi && m.tourRegions && m.tourRegions.length > 1 && (
+                  <button
+                    onClick={() => {
+                      setTourRegions(m.tourRegions);
+                      setTourIndex(0);
+                      setTourActive(true);
+                      setTourPlaying(true);
+                      setManualFocus(false);
+                    }}
+                    style={{
+                      marginTop: '12px',
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      border: 'none',
+                      color: '#ffffff',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                      e.currentTarget.style.boxShadow = '0 4px 6px rgba(37, 99, 235, 0.3)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.transform = 'none';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(37, 99, 235, 0.2)';
+                    }}
+                  >
+                    <Play size={14} fill="#ffffff" />
+                    <span>Take Interactive Tour ({m.tourRegions.length} regions)</span>
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          
+          {isPending && (
+            <div style={{ alignSelf: 'flex-start', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '12px 16px', borderRadius: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <RefreshCw size={14} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+              <span>Tutor is thinking...</span>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input box */}
+        <form 
+          onSubmit={handleSendQuery} 
+          style={{ 
+            display: (isMobile && !chatExpanded) ? 'none' : 'flex',
+            padding: '16px', 
+            borderTop: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', 
+            gap: '8px', 
+            background: isMobile ? 'transparent' : '#ffffff',
+            flexShrink: 0
+          }}
+        >
+          <input 
+            value={input} 
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={activeOrganData ? `Ask about ${activeOrganData.name}...` : "Ask about an organ..."}
+            style={{ 
+              flex: 1, 
+              padding: '10px 14px', 
+              background: '#ffffff', 
+              border: '1px solid #cbd5e1', 
+              borderRadius: '8px', 
+              fontSize: '13px', 
+              color: '#1e293b', 
+              outline: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+            onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+          />
+          <button 
+            type="submit" 
+            disabled={isPending || !input.trim()}
+            style={{ 
+              padding: '10px 14px', 
+              background: input.trim() && !isPending ? '#3b82f6' : '#e2e8f0', 
+              color: input.trim() && !isPending ? '#ffffff' : '#94a3b8', 
+              border: 'none', 
+              borderRadius: '8px', 
+              cursor: input.trim() && !isPending ? 'pointer' : 'default',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.2s'
+            }}
+          >
+            <Send size={16} />
+          </button>
+        </form>
+      </div>
+
       {/* RIGHT: SIDEBAR: SYSTEM & REGIONS SELECTOR */}
       <div style={isMobile ? {
         position: 'absolute',
@@ -1177,7 +1177,8 @@ ${data.clinical}
         background: '#f8fafc',
         transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
-        position: 'relative'
+        position: 'relative',
+        order: 3
       }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '57px', minHeight: '57px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
