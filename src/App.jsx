@@ -1,10 +1,73 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { OrbitControls, useProgress } from '@react-three/drei';
 import { Model } from './Model';
 import { CameraControls } from './CameraControls';
 import { anatomyData, systems } from './AnatomyData';
 import { skeletonAnatomyData } from './SkeletonAnatomyData';
+import { cardioAnatomyData } from './CardioAnatomyData';
+import { heartAnatomyData } from './HeartAnatomyData';
+import { nervousAnatomyData } from './NervousAnatomyData';
+
+const allSystems = [...systems, "Cardiovascular", "Heart", "Nervous"];
+
+// Dynamic directional light that follows the camera position to keep the focused side illuminated
+function CameraLight() {
+  const { camera } = useThree();
+  const topLightRef = useRef();
+  const midLightRef = useRef();
+  const botLightRef = useRef();
+  
+  useFrame(() => {
+    if (topLightRef.current && midLightRef.current && botLightRef.current) {
+      const { x, y, z } = camera.position;
+      // Top light: offset upwards
+      topLightRef.current.position.set(x, y + 2.0, z);
+      // Middle light: camera position
+      midLightRef.current.position.set(x, y, z);
+      // Bottom light: offset downwards
+      botLightRef.current.position.set(x, y - 2.0, z);
+    }
+  });
+
+  return (
+    <>
+      {/* Top light for head/neck/upper chest */}
+      <directionalLight 
+        ref={topLightRef}
+        intensity={0.8} 
+        castShadow 
+        shadow-mapSize-width={1024} 
+        shadow-mapSize-height={1024} 
+        shadow-bias={-0.001}
+      />
+      {/* Middle light for chest/heart/abdomen */}
+      <directionalLight 
+        ref={midLightRef}
+        intensity={1.0} 
+        castShadow 
+        shadow-mapSize-width={2048} 
+        shadow-mapSize-height={2048} 
+        shadow-camera-left={-2}
+        shadow-camera-right={2}
+        shadow-camera-top={2.5}
+        shadow-camera-bottom={-2.5}
+        shadow-camera-near={0.1}
+        shadow-camera-far={25}
+        shadow-bias={-0.001}
+      />
+      {/* Bottom light for limbs/legs */}
+      <directionalLight 
+        ref={botLightRef}
+        intensity={0.6} 
+        castShadow 
+        shadow-mapSize-width={1024} 
+        shadow-mapSize-height={1024} 
+        shadow-bias={-0.001}
+      />
+    </>
+  );
+}
 import { askGeminiTutor } from './GeminiService';
 import { Send, Settings, RefreshCw, Layers, MessageSquare, Info, AlertCircle, HelpCircle, PanelRight, PanelRightClose, PanelRightOpen, X, Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -21,9 +84,31 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [chatExpanded, setChatExpanded] = useState(false);
-  const [showBody, setShowBody] = useState(true);
-  const [showSkeleton, setShowSkeleton] = useState(false);
+  const [showBody, setShowBody] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [showCardio, setShowCardio] = useState(false);
+  const [showHeart, setShowHeart] = useState(false);
+  const [showNervous, setShowNervous] = useState(false);
+  const [heartbeatActive, setHeartbeatActive] = useState(false);
+  const [heartbeatBpm, setHeartbeatBpm] = useState(72);
   const [blenderTexts, setBlenderTexts] = useState(null);
+
+  const { active, progress } = useProgress();
+  const [showLoader, setShowLoader] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
+
+  useEffect(() => {
+    if (!active && progress === 100) {
+      setFadeOut(true);
+      const timer = setTimeout(() => {
+        setShowLoader(false);
+      }, 800);
+      return () => clearTimeout(timer);
+    } else {
+      setShowLoader(true);
+      setFadeOut(false);
+    }
+  }, [active, progress]);
 
   useEffect(() => {
     fetch('./blender_texts.json')
@@ -37,7 +122,6 @@ function App() {
   const [tourIndex, setTourIndex] = useState(0);
   const [tourPlaying, setTourPlaying] = useState(false);
   const [manualFocus, setManualFocus] = useState(false);
-  const [showHair, setShowHair] = useState(true);
 
   // Auto-play timer for the tour
   useEffect(() => {
@@ -76,14 +160,40 @@ function App() {
   const handleSelectSystem = (sys) => {
     setSelectedSystem(sys);
     
-    // Highlight all organs in this system (both body and skeleton)
+    // Highlight all organs in this system (body, skeleton, cardio, or heart)
     const bodyOrganIds = Object.keys(anatomyData).filter(
       key => anatomyData[key].system.toLowerCase() === sys.toLowerCase()
     );
     const skeletonOrganIds = Object.keys(skeletonAnatomyData).filter(
       key => skeletonAnatomyData[key].system.toLowerCase() === sys.toLowerCase()
     );
-    const organIds = [...bodyOrganIds, ...skeletonOrganIds];
+    const cardioOrganIds = Object.keys(cardioAnatomyData).filter(
+      key => cardioAnatomyData[key].system.toLowerCase() === sys.toLowerCase()
+    );
+    const heartOrganIds = Object.keys(heartAnatomyData).filter(
+      key => heartAnatomyData[key].system.toLowerCase() === sys.toLowerCase()
+    );
+    const nervousOrganIds = Object.keys(nervousAnatomyData).filter(
+      key => nervousOrganIds && nervousAnatomyData[key].system.toLowerCase() === sys.toLowerCase()
+    );
+    const organIds = sys === "Cardiovascular" ? cardioOrganIds : 
+                     (sys === "Heart" ? heartOrganIds : 
+                      (sys === "Nervous" ? nervousOrganIds : [...bodyOrganIds, ...skeletonOrganIds]));
+    
+    if (sys === "Cardiovascular") {
+      setShowCardio(true);
+    } else if (sys === "Heart") {
+      setShowHeart(true);
+      setShowCardio(false);
+      setShowBody(false);
+      setShowSkeleton(false);
+    } else if (sys === "Nervous") {
+      setShowNervous(true);
+      setShowHeart(false);
+      setShowCardio(false);
+      setShowBody(false);
+      setShowSkeleton(false);
+    }
     
     setActiveOrgan(null);
     setHighlightedOrgans(organIds);
@@ -148,7 +258,7 @@ function App() {
     }
     
     // If the organ exists in our database, add a clean informational note in the chat
-    const data = anatomyData[organId] || skeletonAnatomyData[organId];
+    const data = anatomyData[organId] || skeletonAnatomyData[organId] || cardioAnatomyData[organId] || heartAnatomyData[organId] || nervousAnatomyData[organId];
     if (data) {
       setInput(`/${data.name}`);
       setMessages((prev) => [
@@ -193,6 +303,9 @@ function App() {
 
     Object.keys(anatomyData).forEach(key => checkMatch(key, anatomyData[key]));
     Object.keys(skeletonAnatomyData).forEach(key => checkMatch(key, skeletonAnatomyData[key]));
+    Object.keys(cardioAnatomyData).forEach(key => checkMatch(key, cardioAnatomyData[key]));
+    Object.keys(heartAnatomyData).forEach(key => checkMatch(key, heartAnatomyData[key]));
+    Object.keys(nervousAnatomyData).forEach(key => checkMatch(key, nervousAnatomyData[key]));
 
     // Group the keys by their base region (System.RegionName)
     // e.g. group "Head.Frontal region.l.001" and "Head.Frontal region.r.001" together
@@ -201,7 +314,7 @@ function App() {
       const parts = key.split('.');
       const baseName = parts.slice(0, 2).join('.'); // "Head.Frontal region"
       if (!grouped[baseName]) {
-        const data = anatomyData[key] || skeletonAnatomyData[key];
+        const data = anatomyData[key] || skeletonAnatomyData[key] || cardioAnatomyData[key] || heartAnatomyData[key] || nervousAnatomyData[key];
         const cleanLabel = data.name.replace(/(Left|Right|Central)\s*/i, '');
         grouped[baseName] = {
           name: cleanLabel,
@@ -242,7 +355,7 @@ function App() {
       // Build chat response with list of regions and descriptions
       let responseText = `### 🔍 Matches found for "${userText}":\n`;
       matchedRegions.forEach((r) => {
-        const data = anatomyData[r.keys[0]] || skeletonAnatomyData[r.keys[0]];
+        const data = anatomyData[r.keys[0]] || skeletonAnatomyData[r.keys[0]] || cardioAnatomyData[r.keys[0]] || heartAnatomyData[r.keys[0]] || nervousAnatomyData[r.keys[0]];
         responseText += `* **${r.name}** (${r.system} System): ${data.description}\n`;
       });
 
@@ -274,11 +387,20 @@ function App() {
         ]);
 
         if (response.highlight) {
-          // Verify it's a valid node name (either body or skeleton)
+          // Verify it's a valid node name (body, skeleton, or cardio)
           const matchedNode = Object.keys(anatomyData).find(
             key => key.toLowerCase() === response.highlight.toLowerCase() || 
                    key.toLowerCase().includes(response.highlight.toLowerCase())
           ) || Object.keys(skeletonAnatomyData).find(
+            key => key.toLowerCase() === response.highlight.toLowerCase() || 
+                   key.toLowerCase().includes(response.highlight.toLowerCase())
+          ) || Object.keys(cardioAnatomyData).find(
+            key => key.toLowerCase() === response.highlight.toLowerCase() || 
+                   key.toLowerCase().includes(response.highlight.toLowerCase())
+          ) || Object.keys(heartAnatomyData).find(
+            key => key.toLowerCase() === response.highlight.toLowerCase() || 
+                   key.toLowerCase().includes(response.highlight.toLowerCase())
+          ) || Object.keys(nervousAnatomyData).find(
             key => key.toLowerCase() === response.highlight.toLowerCase() || 
                    key.toLowerCase().includes(response.highlight.toLowerCase())
           );
@@ -324,7 +446,7 @@ function App() {
     
     let bestMatchKey = null;
     let matchScore = 0;
-    let isSkeletonMatch = false;
+    let matchType = 'body'; // 'body', 'skeleton', or 'cardio'
 
     // Look for exact/partial name matches in our body keys
     Object.keys(anatomyData).forEach(key => {
@@ -341,7 +463,7 @@ function App() {
       if (score > matchScore) {
         matchScore = score;
         bestMatchKey = key;
-        isSkeletonMatch = false;
+        matchType = 'body';
       }
     });
 
@@ -360,12 +482,53 @@ function App() {
       if (score > matchScore) {
         matchScore = score;
         bestMatchKey = key;
-        isSkeletonMatch = true;
+        matchType = 'skeleton';
+      }
+    });
+
+    // Look for exact/partial name matches in our cardio keys
+    Object.keys(cardioAnatomyData).forEach(key => {
+      const data = cardioAnatomyData[key];
+      const name = data.name.toLowerCase();
+      
+      let score = 0;
+      if (lowerQuery.includes(name)) score += 10;
+      if (lowerQuery.includes(data.id.toLowerCase())) score += 8;
+      
+      const cleanRegionName = data.name.replace(/(Left|Right|Central)/, '').trim().toLowerCase();
+      if (lowerQuery.includes(cleanRegionName)) score += 5;
+
+      if (score > matchScore) {
+        matchScore = score;
+        bestMatchKey = key;
+        matchType = 'cardio';
+      }
+    });
+
+    // Look for exact/partial name matches in our heart keys
+    Object.keys(heartAnatomyData).forEach(key => {
+      const data = heartAnatomyData[key];
+      const name = data.name.toLowerCase();
+      
+      let score = 0;
+      if (lowerQuery.includes(name)) score += 10;
+      if (lowerQuery.includes(data.id.toLowerCase())) score += 8;
+      
+      const cleanRegionName = data.name.replace(/(Left|Right|Central)/, '').trim().toLowerCase();
+      if (lowerQuery.includes(cleanRegionName)) score += 5;
+
+      if (score > matchScore) {
+        matchScore = score;
+        bestMatchKey = key;
+        matchType = 'heart';
       }
     });
 
     if (bestMatchKey && matchScore > 0) {
-      const data = isSkeletonMatch ? skeletonAnatomyData[bestMatchKey] : anatomyData[bestMatchKey];
+      const data = matchType === 'skeleton' ? skeletonAnatomyData[bestMatchKey] : 
+                   (matchType === 'cardio' ? cardioAnatomyData[bestMatchKey] : 
+                    (matchType === 'heart' ? heartAnatomyData[bestMatchKey] : 
+                     (matchType === 'nervous' ? nervousAnatomyData[bestMatchKey] : anatomyData[bestMatchKey])));
       setActiveOrgan(bestMatchKey);
       setHighlightedOrgans([bestMatchKey]); // Highlight the organ
       
@@ -455,6 +618,9 @@ ${data.clinical}
 
         Object.keys(anatomyData).forEach(key => checkSuggest(key, anatomyData[key]));
         Object.keys(skeletonAnatomyData).forEach(key => checkSuggest(key, skeletonAnatomyData[key]));
+        Object.keys(cardioAnatomyData).forEach(key => checkSuggest(key, cardioAnatomyData[key]));
+        Object.keys(heartAnatomyData).forEach(key => checkSuggest(key, heartAnatomyData[key]));
+        Object.keys(nervousAnatomyData).forEach(key => checkSuggest(key, nervousAnatomyData[key]));
         suggestions.sort((a, b) => b.score - a.score);
       }
 
@@ -494,15 +660,28 @@ ${data.clinical}
     item => item.system === selectedSystem
   ) : [];
 
-  const systemMeshes = [...bodyMeshes, ...skeletonMeshes];
+  const cardioMeshes = showCardio ? Object.values(cardioAnatomyData).filter(
+    item => item.system === selectedSystem
+  ) : [];
+
+  const heartMeshes = showHeart ? Object.values(heartAnatomyData).filter(
+    item => item.system === selectedSystem
+  ) : [];
+
+  const nervousMeshes = showNervous ? Object.values(nervousAnatomyData).filter(
+    item => item.system === selectedSystem
+  ) : [];
+
+  const systemMeshes = 
+    selectedSystem === "Cardiovascular" ? cardioMeshes : 
+    (selectedSystem === "Heart" ? heartMeshes : 
+     (selectedSystem === "Nervous" ? nervousMeshes : [...bodyMeshes, ...skeletonMeshes]));
 
   // Reset anatomical model camera focus
   const handleResetCamera = () => {
     setActiveOrgan(null);
     setHighlightedOrgans([]); // Clear bulk highlights on reset
   };
-
-  const activeOrganData = activeOrgan ? (anatomyData[activeOrgan] || skeletonAnatomyData[activeOrgan]) : null;
 
   const cleanDisplayName = (name) => {
     if (!name) return '';
@@ -532,12 +711,39 @@ ${data.clinical}
     return clean;
   };
 
+  const activeOrganData = activeOrgan ? (
+    anatomyData[activeOrgan] || 
+    skeletonAnatomyData[activeOrgan] || 
+    cardioAnatomyData[activeOrgan] || 
+    heartAnatomyData[activeOrgan] || 
+    nervousAnatomyData[activeOrgan] || 
+    {
+      id: activeOrgan,
+      name: cleanDisplayName(activeOrgan),
+      system: showHeart ? "Heart" : (showNervous ? "Nervous" : "Cardiovascular"),
+      description: `Part of the ${showHeart ? "heart" : (showNervous ? "nervous" : "cardiovascular")} system.`,
+      function: "Supports anatomical structure and physiological function.",
+      clinical: "Evaluated for physical health, trauma, or clinical deficits."
+    }
+  ) : null;
+
   // Extract region/bone name and match it with Blender text descriptions
   const getDetailedDesc = () => {
     if (!activeOrgan) return null;
-    const parts = activeOrgan.split('.');
-    if (parts.length < 2) return null;
-    const regionName = parts[1];
+    if (!blenderTexts) return null;
+    let regionName = activeOrgan;
+    
+    // 1. strip suffixes like .l or .r first
+    regionName = regionName.replace(/[\._][lr](?=\b|[\._]|$)/i, '');
+    // 2. strip trailing numbers
+    regionName = regionName.replace(/[\._\s]?\d+[\._\s\d]*$/, '');
+    
+    // 3. Then split by dot (category prefix)
+    const parts = regionName.split('.');
+    if (parts.length >= 2) {
+      regionName = parts[1];
+    }
+    
     let text = blenderTexts[regionName];
     if (!text) {
       const key = Object.keys(blenderTexts).find(k => k.toLowerCase() === regionName.toLowerCase());
@@ -607,6 +813,74 @@ ${data.clinical}
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' 
     }}>
       
+      {/* Smooth Model Loading Overlay */}
+      {showLoader && (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: '#ffffff',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: fadeOut ? 0 : 1,
+          transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+          pointerEvents: fadeOut ? 'none' : 'auto',
+        }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '24px',
+            transform: fadeOut ? 'scale(0.95)' : 'scale(1)',
+            transition: 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}>
+            <h1 style={{
+              fontSize: '48px',
+              fontWeight: '800',
+              letterSpacing: '-0.05em',
+              background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              margin: 0,
+              fontFamily: 'system-ui, -apple-system, sans-serif'
+            }}>
+              SOMA
+            </h1>
+            <div style={{
+              width: '240px',
+              height: '6px',
+              background: '#f1f5f9',
+              borderRadius: '999px',
+              overflow: 'hidden',
+              boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, #3b82f6, #2563eb)',
+                borderRadius: '999px',
+                transition: 'width 0.3s ease-out'
+              }} />
+            </div>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#64748b',
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              minWidth: '60px',
+              textAlign: 'center'
+            }}>
+              Loading Anatomy Model ({Math.round(progress)}%)
+            </span>
+          </div>
+        </div>
+      )}
+      
       {/* Mobile Sidebar Overlay Backdrop */}
       {isMobile && sidebarOpen && (
         <div 
@@ -651,8 +925,8 @@ ${data.clinical}
           </span>
           <span style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>
             {hoveredOrgan ? 
-              (anatomyData[hoveredOrgan]?.name || skeletonAnatomyData[hoveredOrgan]?.name || cleanDisplayName(hoveredOrgan)) : 
-              (activeOrgan ? (anatomyData[activeOrgan]?.name || skeletonAnatomyData[activeOrgan]?.name || cleanDisplayName(activeOrgan)) : 'None')}
+              (anatomyData[hoveredOrgan]?.name || skeletonAnatomyData[hoveredOrgan]?.name || cardioAnatomyData[hoveredOrgan]?.name || heartAnatomyData[hoveredOrgan]?.name || nervousAnatomyData[hoveredOrgan]?.name || cleanDisplayName(hoveredOrgan)) : 
+              (activeOrgan ? (anatomyData[activeOrgan]?.name || skeletonAnatomyData[activeOrgan]?.name || cardioAnatomyData[activeOrgan]?.name || heartAnatomyData[activeOrgan]?.name || nervousAnatomyData[activeOrgan]?.name || cleanDisplayName(activeOrgan)) : 'None')}
           </span>
         </div>
 
@@ -696,20 +970,7 @@ ${data.clinical}
             
             {/* Elegant Studio Lighting */}
             <ambientLight intensity={1.2} color="#ffffff" />
-            <directionalLight 
-              position={[5, 10, 5]} 
-              intensity={1.0} 
-              castShadow 
-              shadow-mapSize-width={2048} 
-              shadow-mapSize-height={2048} 
-              shadow-camera-left={-2}
-              shadow-camera-right={2}
-              shadow-camera-top={2.5}
-              shadow-camera-bottom={-2.5}
-              shadow-camera-near={0.1}
-              shadow-camera-far={25}
-              shadow-bias={-0.001}
-            />
+            <CameraLight />
             <directionalLight position={[-5, 5, -5]} intensity={0.4} color="#e2e8f0" />
             <pointLight position={[0, -3, 2]} intensity={0.6} color="#ffffff" />
 
@@ -721,7 +982,11 @@ ${data.clinical}
               highlightedOrgans={highlightedOrgans}
               showBody={showBody}
               showSkeleton={showSkeleton}
-              showHair={showHair}
+              showCardio={showCardio}
+              showHeart={showHeart}
+              showNervous={showNervous}
+              heartbeatActive={heartbeatActive}
+              heartbeatBpm={heartbeatBpm}
             />
 
             <CameraControls 
@@ -729,6 +994,9 @@ ${data.clinical}
               highlightedOrgans={highlightedOrgans} 
               zoomToWholeTour={tourActive && !manualFocus}
               tourRegions={tourRegions}
+              showHeart={showHeart}
+              showCardio={showCardio}
+              showNervous={showNervous}
             />
             <OrbitControls makeDefault enableDamping dampingFactor={0.05} />
           </Canvas>
@@ -1245,80 +1513,258 @@ ${data.clinical}
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
               <input 
                 type="checkbox" 
-                checked={showHair} 
-                onChange={(e) => setShowHair(e.target.checked)}
+                checked={showCardio} 
+                onChange={(e) => setShowCardio(e.target.checked)}
                 style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
               />
-              <span>Hair</span>
+              <span>Cardiovascular</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={showHeart} 
+                onChange={(e) => setShowHeart(e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
+              />
+              <span>Heart Only</span>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input 
+                type="checkbox" 
+                checked={showNervous} 
+                onChange={(e) => setShowNervous(e.target.checked)}
+                style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
+              />
+              <span>Nervous System</span>
             </label>
           </div>
         </div>
 
-        {/* System Category Tabs */}
-        <div style={{ padding: '10px 14px', borderBottom: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          {systems.map((sys) => (
-            <button
-              key={sys}
-              onClick={() => handleSelectSystem(sys)}
-              style={{
-                padding: '4px 8px',
-                fontSize: '11px',
-                fontWeight: '600',
-                borderRadius: '4px',
-                border: '1px solid',
-                borderColor: selectedSystem === sys ? '#3b82f6' : '#cbd5e1',
-                background: selectedSystem === sys ? '#eff6ff' : '#ffffff',
-                color: selectedSystem === sys ? '#1d4ed8' : '#475569',
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-            >
-              {sys}
-            </button>
-          ))}
+        {/* Top Half: Systems and Regions Explorer */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', borderBottom: '1px solid #e2e8f0' }}>
+          {/* System Category Tabs */}
+          <div style={{ padding: '10px 14px', borderBottom: isMobile ? '1px solid rgba(226, 232, 240, 0.3)' : '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '6px', background: '#ffffff' }}>
+            {allSystems.map((sys) => (
+              <button
+                key={sys}
+                onClick={() => handleSelectSystem(sys)}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  borderRadius: '4px',
+                  border: '1px solid',
+                  borderColor: selectedSystem === sys ? '#3b82f6' : '#cbd5e1',
+                  background: selectedSystem === sys ? '#eff6ff' : '#ffffff',
+                  color: selectedSystem === sys ? '#1d4ed8' : '#475569',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {sys}
+              </button>
+            ))}
+          </div>
+
+          {/* Scrollable list of regions in the selected system */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', paddingLeft: '8px' }}>
+              {selectedSystem} Regions ({systemMeshes.length})
+            </div>
+            {selectedSystem === "Cardiovascular" ? (
+              // Grouped cardiovascular list
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {['Heart', 'Head & Brain', 'Lungs', 'Kidneys', 'Upper Limbs (Arms/Hands)', 'Lower Limbs (Legs/Feet)', 'Body (Abdomen & Pelvis)', 'Other Vessels'].map((group) => {
+                  const groupMeshes = systemMeshes.filter(mesh => mesh.group === group);
+                  if (groupMeshes.length === 0) return null;
+                  return (
+                    <div key={group} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ 
+                        fontSize: '11px', 
+                        fontWeight: '700', 
+                        textTransform: 'uppercase', 
+                        color: '#475569', 
+                        marginTop: '8px', 
+                        marginBottom: '4px', 
+                        paddingLeft: '8px',
+                        borderLeft: '2px solid #3b82f6',
+                        background: '#f1f5f9',
+                        padding: '4px 8px',
+                        borderRadius: '4px'
+                      }}>
+                        {group} ({groupMeshes.length})
+                      </div>
+                      {groupMeshes.map((mesh) => {
+                        const isSelected = activeOrgan === mesh.id;
+                        const isHovered = hoveredOrgan === mesh.id;
+                        return (
+                          <button
+                            key={mesh.id}
+                            onClick={() => {
+                              handleSelectOrgan(mesh.id);
+                              if (isMobile) setSidebarOpen(false); // Auto-close drawer on select
+                            }}
+                            onMouseEnter={() => setHoveredOrgan(mesh.id)}
+                            onMouseLeave={() => setHoveredOrgan(null)}
+                            style={{
+                              textAlign: 'left',
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              background: isSelected ? '#3b82f6' : (isHovered ? '#e2e8f0' : 'transparent'),
+                              color: isSelected ? '#ffffff' : '#334155',
+                              cursor: 'pointer',
+                              transition: 'all 0.1s',
+                              fontWeight: isSelected ? '600' : 'normal',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}
+                          >
+                            {mesh.name.replace(/(Left|Right|Central)\s*/, '')} 
+                            <span style={{ fontSize: '10px', float: 'right', opacity: 0.6 }}>
+                              {mesh.side !== 'Central' ? mesh.side[0] : ''}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Standard flat list
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                {systemMeshes.map((mesh) => {
+                  const isSelected = activeOrgan === mesh.id;
+                  const isHovered = hoveredOrgan === mesh.id;
+                  return (
+                    <button
+                      key={mesh.id}
+                      onClick={() => {
+                        handleSelectOrgan(mesh.id);
+                        if (isMobile) setSidebarOpen(false); // Auto-close drawer on select
+                      }}
+                      onMouseEnter={() => setHoveredOrgan(mesh.id)}
+                      onMouseLeave={() => setHoveredOrgan(null)}
+                      style={{
+                        textAlign: 'left',
+                        padding: '8px 12px',
+                        fontSize: '13px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: isSelected ? '#3b82f6' : (isHovered ? '#e2e8f0' : 'transparent'),
+                        color: isSelected ? '#ffffff' : '#334155',
+                        cursor: 'pointer',
+                        transition: 'all 0.1s',
+                        fontWeight: isSelected ? '600' : 'normal',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {mesh.name.replace(/(Left|Right|Central)\s*/, '')} 
+                      <span style={{ fontSize: '10px', float: 'right', opacity: 0.6 }}>
+                        {mesh.side !== 'Central' ? mesh.side[0] : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Scrollable list of regions in the selected system */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-          <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#94a3b8', marginBottom: '8px', paddingLeft: '8px' }}>
-            {selectedSystem} Regions ({systemMeshes.length})
+        {/* Bottom Half: System Animations Controls */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#f8fafc' }}>
+          <div style={{ 
+            padding: '12px 20px', 
+            borderBottom: '1px solid #e2e8f0', 
+            background: '#f1f5f9', 
+            fontSize: '10px', 
+            fontWeight: '700', 
+            textTransform: 'uppercase', 
+            color: '#94a3b8', 
+            letterSpacing: '0.05em' 
+          }}>
+            System Animations
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            {systemMeshes.map((mesh) => {
-              const isSelected = activeOrgan === mesh.id;
-              const isHovered = hoveredOrgan === mesh.id;
-              return (
+          
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+            {(showHeart || selectedSystem === "Heart") ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
+                  Heart Beat Animation
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>
+                  Simulates a biologically accurate, elastic cardiac cycle (atrial systole followed by ventricular contraction with elastic recoil jiggles) on the isolated heart model.
+                </div>
+                
+                {/* Play/Pause Button */}
                 <button
-                  key={mesh.id}
-                  onClick={() => {
-                    handleSelectOrgan(mesh.id);
-                    if (isMobile) setSidebarOpen(false); // Auto-close drawer on select
-                  }}
-                  onMouseEnter={() => setHoveredOrgan(mesh.id)}
-                  onMouseLeave={() => setHoveredOrgan(null)}
+                  onClick={() => setHeartbeatActive(!heartbeatActive)}
                   style={{
-                    textAlign: 'left',
-                    padding: '8px 12px',
-                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '10px 16px',
+                    fontSize: '12px',
+                    fontWeight: '600',
                     borderRadius: '6px',
                     border: 'none',
-                    background: isSelected ? '#3b82f6' : (isHovered ? '#e2e8f0' : 'transparent'),
-                    color: isSelected ? '#ffffff' : '#334155',
+                    background: heartbeatActive ? '#ef4444' : '#3b82f6',
+                    color: '#ffffff',
                     cursor: 'pointer',
-                    transition: 'all 0.1s',
-                    fontWeight: isSelected ? '600' : 'normal',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
+                    transition: 'background 0.2s',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
                   }}
                 >
-                  {mesh.name.replace(/(Left|Right|Central)\s*/, '')} 
-                  <span style={{ fontSize: '10px', float: 'right', opacity: 0.6 }}>
-                    {mesh.side !== 'Central' ? mesh.side[0] : ''}
-                  </span>
+                  {heartbeatActive ? <Pause size={14} /> : <Play size={14} />}
+                  {heartbeatActive ? 'Pause Heartbeat' : 'Start Heartbeat'}
                 </button>
-              );
-            })}
+
+                {/* BPM Slider */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: '#475569' }}>
+                    <span>Heart Rate</span>
+                    <span style={{ color: '#3b82f6' }}>{heartbeatBpm} BPM</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="40"
+                    max="180"
+                    value={heartbeatBpm}
+                    onChange={(e) => setHeartbeatBpm(parseInt(e.target.value))}
+                    style={{ width: '100%', accentColor: '#3b82f6', cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#94a3b8' }}>
+                    <span>40 (Bradycardia)</span>
+                    <span>72 (Normal)</span>
+                    <span>180 (Tachycardia)</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                height: '100%', 
+                textAlign: 'center', 
+                color: '#94a3b8', 
+                padding: '20px', 
+                gap: '8px' 
+              }}>
+                <span style={{ fontSize: '28px' }}>🎬</span>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748b' }}>No Active Animations</span>
+                <span style={{ fontSize: '11px', color: '#94a3b8', maxWidth: '200px', lineHeight: '1.4' }}>
+                  Select the 'Heart' system or enable 'Heart Only' layer to show heartbeat controls.
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

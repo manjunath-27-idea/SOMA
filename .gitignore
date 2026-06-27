@@ -28,3 +28,8 @@ process.md
 
 # Local scripts
 start_server.bat
+
+# Uncompressed models and backups
+*.uncompressed.glb
+*.bak
+

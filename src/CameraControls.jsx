@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
-export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWholeTour = false, tourRegions = [] }) {
+export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWholeTour = false, tourRegions = [], showHeart = false, showCardio = false }) {
   const { camera, scene, controls } = useThree();
   
   // Track target positions for interpolation
@@ -56,7 +56,53 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWhol
       return;
     }
 
+    const isHeartModelMesh = (child) => {
+      let temp = child;
+      while (temp) {
+        if (temp.name === 'heart-group') return true;
+        temp = temp.parent;
+      }
+      return false;
+    };
+
     if (!activeOrgan && (!highlightedOrgans || highlightedOrgans.length === 0)) {
+      if (showHeart) {
+        // Zoom camera to focus on the Heart model dynamically
+        let targetMeshes = [];
+        scene.traverse((child) => {
+          if (child.isMesh && isHeartModelMesh(child)) {
+            targetMeshes.push(child);
+          }
+        });
+
+        if (targetMeshes.length > 0) {
+          const combinedBox = new THREE.Box3();
+          targetMeshes.forEach((mesh, index) => {
+            const box = new THREE.Box3().setFromObject(mesh);
+            if (index === 0) {
+              combinedBox.copy(box);
+            } else {
+              combinedBox.union(box);
+            }
+          });
+
+          const center = new THREE.Vector3();
+          combinedBox.getCenter(center);
+          
+          const size = new THREE.Vector3();
+          combinedBox.getSize(size);
+          
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const fovRad = camera.fov * (Math.PI / 180);
+          let distance = Math.abs(maxDim / Math.sin(fovRad / 2));
+
+          targetLookAt.current.copy(center);
+          distance = Math.max(distance * 0.7, 0.7);
+          targetPos.current.set(0, center.y + 0.05, distance);
+          return;
+        }
+      }
+
       // Default camera state: Reset back to viewing the entire body
       // On mobile, zoom out slightly (z = 5.5) to prevent vertical clipping on narrow screens
       const defaultZ = (typeof window !== 'undefined' && window.innerWidth < 768) ? 5.5 : 4.5;
@@ -106,10 +152,39 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWhol
       const fovRad = camera.fov * (Math.PI / 180);
       let distance = Math.abs(maxDim / Math.sin(fovRad / 2));
 
+      const isHeartMesh = (name) => {
+        if (!name) return false;
+        const lower = name.toLowerCase();
+        return (
+          lower.includes('heart') ||
+          lower.includes('atrium') ||
+          lower.includes('ventricle') ||
+          lower.includes('coronary') ||
+          lower.includes('valve') ||
+          lower.includes('leaflet') ||
+          lower.includes('cusp') ||
+          lower.includes('papillary') ||
+          lower.includes('septum') ||
+          lower.includes('circumflex') ||
+          lower.includes('interventricular') ||
+          lower.includes('myocardium') ||
+          lower.includes('cardiac') ||
+          lower.includes('auricle') ||
+          lower.includes('mitral') ||
+          lower.includes('tricuspid') ||
+          lower.includes('chordae') ||
+          lower.includes('atrioventricular') ||
+          lower.includes('trabeculae') ||
+          lower.includes('marginal')
+        );
+      };
+
       if (activeOrgan) {
-        // Single organ zoom (Restore the original single organ zoom logic)
+        // Single organ zoom
         targetLookAt.current.copy(center);
-        distance = Math.max(distance * 1.5, 0.6);
+        const isHeart = isHeartMesh(activeOrgan);
+        const multiplier = isHeart ? 0.75 : 1.5;
+        distance = Math.max(distance * multiplier, isHeart ? 0.35 : 0.6);
         
         // Determine the direction vector from the body center axis to the mesh center in the horizontal X-Z plane
         const dir = new THREE.Vector3(0, 0, 1);
@@ -123,17 +198,22 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWhol
         targetPos.current.y += maxDim * 0.2;
       } else {
         // Multiple organs (system) zoom
-        // Center the camera targets on the vertical axis (x=0, z=0) to ensure turntable rotation remains smooth and centered!
-        targetLookAt.current.set(0, center.y, 0);
+        const isHeartSystem = highlightedOrgans.length > 0 && highlightedOrgans.every(name => isHeartMesh(name));
         
-        // Slightly pad distance for a nice framing
-        distance = Math.max(distance * 1.2, 1.2);
-        
-        // Place camera directly in front at the calculated height and distance
-        targetPos.current.set(0, center.y + 0.1, distance);
+        if (isHeartSystem) {
+          // Center controls directly on the heart for nice close-up orbital viewing
+          targetLookAt.current.copy(center);
+          distance = Math.max(distance * 0.7, 0.7);
+          targetPos.current.set(0, center.y + 0.05, distance);
+        } else {
+          // Center the camera targets on the vertical axis (x=0, z=0) to ensure turntable rotation remains smooth and centered!
+          targetLookAt.current.set(0, center.y, 0);
+          distance = Math.max(distance * 1.2, 1.2);
+          targetPos.current.set(0, center.y + 0.1, distance);
+        }
       }
     }
-  }, [activeOrgan, highlightedOrgans, zoomToWholeTour, tourRegions, scene, camera]);
+  }, [activeOrgan, highlightedOrgans, zoomToWholeTour, tourRegions, scene, camera, showHeart, showCardio]);
 
   useFrame(() => {
     // Only lerp the camera position and target during the transition window
