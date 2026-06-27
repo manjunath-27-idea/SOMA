@@ -184,7 +184,7 @@ function App() {
       setShowCardio(true);
     } else if (sys === "Heart") {
       setShowHeart(true);
-      setShowCardio(false);
+      setShowCardio(true);
       setShowBody(false);
       setShowSkeleton(false);
     } else if (sys === "Nervous") {
@@ -1514,19 +1514,25 @@ ${data.clinical}
               <input 
                 type="checkbox" 
                 checked={showCardio} 
-                onChange={(e) => setShowCardio(e.target.checked)}
+                onChange={(e) => {
+                  setShowCardio(e.target.checked);
+                  if (!e.target.checked) {
+                    setShowHeart(false);
+                  }
+                }}
                 style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
               />
               <span>Cardiovascular</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: showCardio ? 'pointer' : 'default', userSelect: 'none', marginLeft: '20px', opacity: showCardio ? 1.0 : 0.5 }}>
               <input 
                 type="checkbox" 
                 checked={showHeart} 
+                disabled={!showCardio}
                 onChange={(e) => setShowHeart(e.target.checked)}
-                style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: 'pointer' }}
+                style={{ width: '15px', height: '15px', accentColor: '#3b82f6', cursor: showCardio ? 'pointer' : 'default' }}
               />
-              <span>Heart Only</span>
+              <span>Heart</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
               <input 

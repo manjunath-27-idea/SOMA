@@ -21,7 +21,7 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWhol
       let targetMeshes = [];
       const allKeys = tourRegions.flatMap(r => r.keys);
       scene.traverse((child) => {
-        if (child.isMesh && allKeys.includes(child.name)) {
+        if (child.isMesh && child.visible && allKeys.includes(child.name)) {
           targetMeshes.push(child);
         }
       });
@@ -66,43 +66,6 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWhol
     };
 
     if (!activeOrgan && (!highlightedOrgans || highlightedOrgans.length === 0)) {
-      if (showHeart) {
-        // Zoom camera to focus on the Heart model dynamically
-        let targetMeshes = [];
-        scene.traverse((child) => {
-          if (child.isMesh && isHeartModelMesh(child)) {
-            targetMeshes.push(child);
-          }
-        });
-
-        if (targetMeshes.length > 0) {
-          const combinedBox = new THREE.Box3();
-          targetMeshes.forEach((mesh, index) => {
-            const box = new THREE.Box3().setFromObject(mesh);
-            if (index === 0) {
-              combinedBox.copy(box);
-            } else {
-              combinedBox.union(box);
-            }
-          });
-
-          const center = new THREE.Vector3();
-          combinedBox.getCenter(center);
-          
-          const size = new THREE.Vector3();
-          combinedBox.getSize(size);
-          
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const fovRad = camera.fov * (Math.PI / 180);
-          let distance = Math.abs(maxDim / Math.sin(fovRad / 2));
-
-          targetLookAt.current.copy(center);
-          distance = Math.max(distance * 0.7, 0.7);
-          targetPos.current.set(0, center.y + 0.05, distance);
-          return;
-        }
-      }
-
       // Default camera state: Reset back to viewing the entire body
       // On mobile, zoom out slightly (z = 5.5) to prevent vertical clipping on narrow screens
       const defaultZ = (typeof window !== 'undefined' && window.innerWidth < 768) ? 5.5 : 4.5;
@@ -120,7 +83,7 @@ export function CameraControls({ activeOrgan, highlightedOrgans = [], zoomToWhol
       return base1 === base2;
     };
     scene.traverse((child) => {
-      if (child.isMesh) {
+      if (child.isMesh && child.visible) {
         if (activeOrgan && (child.name === activeOrgan || shareParent(child.name, activeOrgan))) {
           targetMeshes.push(child);
         } else if (!activeOrgan && highlightedOrgans && highlightedOrgans.includes(child.name)) {

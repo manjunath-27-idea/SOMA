@@ -191,6 +191,12 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
     if (cardio && cardio.scene) {
       cardio.scene.traverse((child) => {
         if (child.isMesh) {
+          // Hide cardiovascular heart meshes
+          const isCardioHeart = cardioAnatomyData[child.name]?.group === 'Heart';
+          if (isCardioHeart) {
+            child.visible = false;
+          }
+
           child.castShadow = true;
           child.receiveShadow = true;
           
@@ -322,7 +328,18 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
             const clonedMat = originalMat.clone();
             clonedMat.side = THREE.FrontSide;
 
-            // Colors are now pre-embedded natively in Heart.glb
+            // Copy color from corresponding cardiovascular mesh to ensure match
+            const cardioKey = `cardio_${child.name}`;
+            const cardioOrig = originalMaterialsRef.current.get(cardioKey);
+            if (cardioOrig && cardioOrig.color) {
+              clonedMat.color.copy(cardioOrig.color);
+            } else if (cardio && cardio.scene) {
+              cardio.scene.traverse((cardioChild) => {
+                if (cardioChild.isMesh && cardioChild.name === child.name && cardioChild.material && cardioChild.material.color) {
+                  clonedMat.color.copy(cardioChild.material.color);
+                }
+              });
+            }
 
             // Compute localToHeart matrix relative to heart.scene hierarchically
             const localToHeart = new THREE.Matrix4();
@@ -647,6 +664,12 @@ export function Model({ activeOrgan, hoveredOrgan, onSelectOrgan, onHoverOrgan, 
     if (cardio && cardio.scene) {
       cardio.scene.traverse((child) => {
         if (child.isMesh) {
+          const isCardioHeart = cardioAnatomyData[child.name]?.group === 'Heart';
+          if (isCardioHeart) {
+            child.visible = false;
+            return;
+          }
+
           const isSelected = child.name === activeOrgan || highlightedOrgans.includes(child.name) || shareParentRegion(child.name, activeOrgan);
           const isHovered = child.name === hoveredOrgan || child.name === hoveredMeshName || shareParentRegion(child.name, hoveredOrgan) || shareParentRegion(child.name, hoveredMeshName);
           const orig = originalMaterialsRef.current.get(`cardio_${child.name}`);
