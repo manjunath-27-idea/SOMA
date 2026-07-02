@@ -30,10 +30,6 @@ Unlike static 3D models or text-based medical bots, SOMA synchronizes human-like
 * **3D Render Engine:** Built on **React Three Fiber (R3F)** and **Three.js** for hardware-accelerated 3D graphics directly in the browser.
 * **AI Cognitive Layer:** Contextual medical prompting using custom system prompts and real-time streaming parser.
 * **Custom GLSL Shader Pipeline:** To achieve smooth, lag-free deformations like the heartbeat, SOMA overrides default Three.js materials via `onBeforeCompile`, deforming vertices in local heart-space with custom uniform parameters.
-* **Material Shading Isolation:** To protect the 3D artist's workstation, SOMA implements a viewport color split:
-  * **Blender viewport:** Solid grey (`[0.8, 0.8, 0.8]`) for clutter-free editing.
-  * **GLB/SOMA Shader:** Full biological colors exported via Principled BSDF nodes.
-* **Automated Asset Pipeline:** Uses headless Python scripting (`apply_nerve_materials_and_export.py`) to automate mesh cleaning, material mapping, unparenting, and glTF/GLB export.
 
 ---
 
@@ -43,16 +39,11 @@ Unlike static 3D models or text-based medical bots, SOMA synchronizes human-like
    ```bash
    npm install
    ```
-2. **Configure API Keys:**
-   Create a `.env` file in the root directory:
-   ```env
-   VITE_GEMINI_API_KEY=your_gemini_api_key_here
-   ```
-3. **Run in Development Mode:**
+2. **Run in Development Mode:**
    ```bash
    npm run dev
    ```
-4. **Build for Production:**
+3. **Build for Production:**
    ```bash
    npm run build
    ```
