@@ -36,34 +36,16 @@ function CameraLight() {
       <directionalLight 
         ref={topLightRef}
         intensity={0.8} 
-        castShadow 
-        shadow-mapSize-width={1024} 
-        shadow-mapSize-height={1024} 
-        shadow-bias={-0.001}
       />
       {/* Middle light for chest/heart/abdomen */}
       <directionalLight 
         ref={midLightRef}
         intensity={1.0} 
-        castShadow 
-        shadow-mapSize-width={2048} 
-        shadow-mapSize-height={2048} 
-        shadow-camera-left={-2}
-        shadow-camera-right={2}
-        shadow-camera-top={2.5}
-        shadow-camera-bottom={-2.5}
-        shadow-camera-near={0.1}
-        shadow-camera-far={25}
-        shadow-bias={-0.001}
       />
       {/* Bottom light for limbs/legs */}
       <directionalLight 
         ref={botLightRef}
         intensity={0.6} 
-        castShadow 
-        shadow-mapSize-width={1024} 
-        shadow-mapSize-height={1024} 
-        shadow-bias={-0.001}
       />
     </>
   );
@@ -686,6 +668,8 @@ ${data.clinical}
   const cleanDisplayName = (name) => {
     if (!name) return '';
     let clean = name;
+    // Strip trailing .g, .j, .t helper suffixes
+    clean = clean.replace(/[\._][gjt](?=\b|[\._]|$)/i, '');
     // 1. Strip l/r sides separated by dot or underscore
     clean = clean.replace(/[\._][lr](?=\b|[\._]|$)/i, '');
     // 2. Strip trailing numerical suffixes like .001, _2, 001_2, .001_2
@@ -962,8 +946,7 @@ ${data.clinical}
         {/* 3D Canvas */}
         <div style={{ flex: 1, width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
           <Canvas 
-            shadows
-            camera={{ position: [0, 0, isMobile ? 5.5 : 4.5], fov: 45 }}
+            camera={{ position: [0, 0, isMobile ? 5.5 : 4.5], fov: 45, near: 0.1, far: 20 }}
             style={{ background: '#ffffff' }}
           >
             <color attach="background" args={['#ffffff']} />

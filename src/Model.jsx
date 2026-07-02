@@ -46,8 +46,6 @@ function SkeletonModel({ showSkeleton, activeOrgan, hoveredOrgan, hoveredMeshNam
     if (skeleton && skeleton.scene) {
       skeleton.scene.traverse((child) => {
         if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
           if (!(child.material instanceof THREE.MeshStandardMaterial) || child.material.name !== 'soma-bone') {
             child.material = new THREE.MeshStandardMaterial({
               name: 'soma-bone',
@@ -134,8 +132,6 @@ function BodyModel({ showBody, activeOrgan, hoveredOrgan, hoveredMeshName, setHo
             child.material = originalMat.clone();
             child.material.side = THREE.FrontSide;
           }
-          child.castShadow = true;
-          child.receiveShadow = true;
         }
       });
     }
@@ -238,9 +234,6 @@ function CardioModel({ showCardio, activeOrgan, hoveredOrgan, hoveredMeshName, s
           if (isCardioHeart) {
             child.visible = false;
           }
-
-          child.castShadow = true;
-          child.receiveShadow = true;
           
           const cacheKey = `cardio_${child.name}`;
           if (!originalMaterialsRef.current.has(cacheKey)) {
@@ -338,16 +331,13 @@ function CardioModel({ showCardio, activeOrgan, hoveredOrgan, hoveredMeshName, s
 // 4. Nervous Model (Lazy-loaded)
 function NervousModel({ showNervous, activeOrgan, hoveredOrgan, hoveredMeshName, setHoveredMeshName, onSelectOrgan, onHoverOrgan, highlightedOrgans }) {
   if (!showNervous) return null;
-  const nervous = useGLTF('./Nervous_system.glb');
+  const nervous = useGLTF('./Nervous_system.glb?v=3');
   const originalMaterialsRef = useRef(new Map());
 
   useEffect(() => {
     if (nervous && nervous.scene) {
       nervous.scene.traverse((child) => {
         if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-          
           const cacheKey = `nervous_${child.name}`;
           if (!originalMaterialsRef.current.has(cacheKey)) {
             const originalMat = child.material;
@@ -355,20 +345,22 @@ function NervousModel({ showNervous, activeOrgan, hoveredOrgan, hoveredMeshName,
             clonedMat.side = THREE.FrontSide;
 
             const nameLower = child.name.toLowerCase();
-            if (nameLower.includes('cornea')) {
+            if (nameLower.includes('segment of eyeball') || nameLower.includes('chamber of eyeball') || nameLower.includes('axis of eyeball') || nameLower.includes('meridians of eyeball')) {
               clonedMat.transparent = true;
-              clonedMat.opacity = 0.15;
+              clonedMat.opacity = 0.0;
+              clonedMat.visible = false;
+            } else if (nameLower.includes('cornea')) {
+              clonedMat.transparent = true;
+              clonedMat.opacity = 0.3; // Beautiful warm transparent brown eye lens dome!
             } else if (nameLower.includes('lens')) {
               clonedMat.transparent = true;
-              clonedMat.opacity = 0.4;
+              clonedMat.opacity = 0.15;
             } else if (nameLower.includes('vitreous')) {
               clonedMat.transparent = true;
-              clonedMat.opacity = 0.15;
+              clonedMat.opacity = 0.03;
             } else if (nameLower.includes('tympanic')) {
               clonedMat.transparent = true;
-              clonedMat.opacity = 0.6;
-            } else {
-              clonedMat.color.set('#f59e0b');
+              clonedMat.opacity = 0.4;
             }
 
             originalMaterialsRef.current.set(cacheKey, {
@@ -607,9 +599,6 @@ function HeartPrimitive({ showCardio, activeOrgan, hoveredOrgan, hoveredMeshName
 
       heart.scene.traverse((child) => {
         if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-          
           const cacheKey = `heart_${child.uuid}`;
           if (!originalMaterialsRef.current.has(cacheKey)) {
             const originalMat = child.material;
