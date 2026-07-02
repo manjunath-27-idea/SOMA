@@ -12,22 +12,28 @@ Unlike static 3D models or text-based medical bots, SOMA synchronizes human-like
 
 ## 🌟 Core Features
 
-* **AI-Spatial Synchronization:** Powered by the Google Gemini API (with GPT-4o compatibility), the AI doesn't just talk; it acts. It identifies anatomical coordinates to trigger automated camera zooms and focal highlights.
-* **Complete Biological Atlas:** A structured 3D hierarchy representing the skeletal, muscular, circulatory, and organ systems.
-* **Dynamic X-Ray Vision:** Real-time material manipulation allows the AI to make skin or muscles transparent to reveal deep-seated internal organs during explanations.
-* **Contextual Animation:** Conceptual animations (such as heart rhythms or respiratory cycles) trigger dynamically based on the chat context.
-* **Zero-Footprint Web Engine:** Built on Three.js/React Three Fiber, the platform delivers high-precision medical visualization directly in the browser without requiring heavy software installations.
-* **Slash Commands (`/`):** Directly query systems or groups of regions from the chat box (e.g. `/head`, `/abdomen`, or `/Epigastric Region`) to automatically trigger zoom framing, multi-organ highlights, and auto-rotation.
-* **Selection-to-Input Sync:** Clicking any organ or system tab automatically populates the chat box with its corresponding slash command format.
+* **AI-Spatial Synchronization:** Integrated with the Google Gemini API (with OpenAI/GPT-4o fallback). SOMA parses the AI's natural language responses in real-time, extracting anatomical coordinates to trigger smooth camera zooms, focus targets, and highlighted glows.
+* **Multi-System Biological Atlas:** Structured 3D hierarchies representing:
+  * **Skeletal System** (`Skeleton.glb`)
+  * **Muscular/Cardiovascular System** (`Cardio.glb`)
+  * **High-Definition Heart** (`Heart.glb`)
+  * **Nervous System & Sense Organs** (`Nervous_system.glb`)
+* **Dynamic X-Ray & Peel-Back Vision:** Dynamic material manipulation allows the rendering engine to hide or make muscle/bone layers transparent, exposing deep internal organs when referenced by the AI.
+* **GPU-Accelerated Heartbeat Animation:** Conceptual cardiac cycles (atrial contraction, ventricular contraction, and valve closure rebounds) are animated in real-time directly on the GPU using custom vertex shaders.
+* **Selection-to-Input Sync:** Clicking any organ in the 3D viewport or browsing the anatomical hierarchy sidebar automatically focuses the region, highlights it, and populates the chat box with its corresponding slash command.
+* **Contextual Command Palette:** Support for slash commands (e.g., `/head`, `/abdomen`, `/Epigastric Region`) to trigger automated zooming, side-matching, and orbital rotations.
 
 ---
 
 ## 🛠️ Technical Architecture
 
-* **The Body (Frontend):** React Three Fiber (R3F) and Three.js for hardware-accelerated 3D rendering.
-* **The Brain (AI):** Google Gemini API / OpenAI API with a custom system prompt for "Anatomical Mapping."
-* **The Interface:** A responsive side-by-side UI where the 3D viewport and AI terminal share a real-time state.
-* **The Precision Logic:** A custom Regex-based command parser that translates AI text streams and user slash inputs into 3D scene actions (e.g., camera framing and solid highlighting).
+* **3D Render Engine:** Built on **React Three Fiber (R3F)** and **Three.js** for hardware-accelerated 3D graphics directly in the browser.
+* **AI Cognitive Layer:** Contextual medical prompting using custom system prompts and real-time streaming parser.
+* **Custom GLSL Shader Pipeline:** To achieve smooth, lag-free deformations like the heartbeat, SOMA overrides default Three.js materials via `onBeforeCompile`, deforming vertices in local heart-space with custom uniform parameters.
+* **Material Shading Isolation:** To protect the 3D artist's workstation, SOMA implements a viewport color split:
+  * **Blender viewport:** Solid grey (`[0.8, 0.8, 0.8]`) for clutter-free editing.
+  * **GLB/SOMA Shader:** Full biological colors exported via Principled BSDF nodes.
+* **Automated Asset Pipeline:** Uses headless Python scripting (`apply_nerve_materials_and_export.py`) to automate mesh cleaning, material mapping, unparenting, and glTF/GLB export.
 
 ---
 
@@ -37,11 +43,16 @@ Unlike static 3D models or text-based medical bots, SOMA synchronizes human-like
    ```bash
    npm install
    ```
-2. **Run in Development Mode:**
+2. **Configure API Keys:**
+   Create a `.env` file in the root directory:
+   ```env
+   VITE_GEMINI_API_KEY=your_gemini_api_key_here
+   ```
+3. **Run in Development Mode:**
    ```bash
    npm run dev
    ```
-3. **Build for Production:**
+4. **Build for Production:**
    ```bash
    npm run build
    ```
@@ -50,10 +61,10 @@ Unlike static 3D models or text-based medical bots, SOMA synchronizes human-like
 
 ## 🔍 Slash Command Examples
 
-* `/Head` — Highlights all head organs and zooms to the head.
-* `/Neck` — Highlights all neck organs and zooms to the neck.
-* `/Epigastric Region` — Highlights both the Left and Right Epigastric regions simultaneously (automatic side matching).
-* `/Left Epigastric Region, Left Umbilical Region` — Highlights multiple specific regions.
+* `/Head` — Automatically focuses and frames the cranial region.
+* `/Neck` — Zooms into the cervical vertebrae and neck musculature.
+* `/Epigastric Region` — Focuses and highlights abdominal regions.
+* `/Left Epigastric Region, Left Umbilical Region` — Highlights multiple specific structures simultaneously.
 
 ---
 
